@@ -12,17 +12,6 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const { initDatabase, query, queryOne, run, runReturningId } = require('./database');
 
-const logFile = path.join(__dirname, 'startup.log');
-function logToFile(msg) {
-  const line = `[${new Date().toISOString()}] ${msg}\n`;
-  fs.appendFileSync(logFile, line);
-  console.log(msg);
-}
-process.on('uncaughtException', (err) => { logToFile('UNCAUGHT: ' + err.stack); process.exit(1); });
-process.on('unhandledRejection', (err) => { logToFile('UNHANDLED: ' + (err.stack || err)); });
-
-logToFile('Process started, NODE_ENV=' + process.env.NODE_ENV + ', DATABASE_URL=' + (process.env.DATABASE_URL ? 'set' : 'NOT SET'));
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 10e6 });
@@ -76,13 +65,6 @@ if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
 app.use('/uploads', express.static(uploadsDir));
 
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0, etag: false, lastModified: false }));
-
-let dbReady = false;
-let dbError = null;
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', dbReady, dbError: dbError ? dbError.message : null, uptime: process.uptime() });
-});
 
 // ─── File Upload ─────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
@@ -1027,14 +1009,11 @@ io.on('connection', (socket) => {
 
 async function start() {
   try {
-    logToFile('Iniciando banco de dados...');
+    console.log('Iniciando banco de dados...');
     await initDatabase();
-    logToFile('Banco de dados inicializado com sucesso');
-    dbReady = true;
+    console.log('Banco de dados inicializado com sucesso');
   } catch (err) {
-    logToFile('Erro ao inicializar banco: ' + err.message);
-    logToFile(err.stack);
-    dbError = err;
+    console.error('Erro ao inicializar banco:', err.message);
   }
 
   // Cleanup expired refresh tokens periodically
@@ -1065,7 +1044,6 @@ async function start() {
 }
 
 start().catch(err => {
-  logToFile('FATAL: ' + err.message);
-  logToFile(err.stack);
+  console.error('FATAL:', err.message);
   process.exit(1);
 });
