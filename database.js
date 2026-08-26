@@ -2,10 +2,8 @@ const { Pool } = require('pg');
 
 const poolConfig = {
   connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 };
-if (process.env.NODE_ENV === 'production') {
-  poolConfig.ssl = { rejectUnauthorized: false };
-}
 const pool = new Pool(poolConfig);
 
 pool.on('error', (err) => {

@@ -19,7 +19,7 @@ function logToFile(msg) {
   console.log(msg);
 }
 process.on('uncaughtException', (err) => { logToFile('UNCAUGHT: ' + err.stack); process.exit(1); });
-process.on('unhandledRejection', (err) => { logToFile('UNHANDLED: ' + (err.stack || err)); process.exit(1); });
+process.on('unhandledRejection', (err) => { logToFile('UNHANDLED: ' + (err.stack || err)); });
 
 logToFile('Process started, NODE_ENV=' + process.env.NODE_ENV + ', DATABASE_URL=' + (process.env.DATABASE_URL ? 'set' : 'NOT SET'));
 
@@ -1026,7 +1026,6 @@ async function start() {
   } catch (err) {
     logToFile('Erro ao inicializar banco: ' + err.message);
     logToFile(err.stack);
-    process.exit(1);
   }
 
   // Cleanup expired refresh tokens periodically
