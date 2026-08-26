@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
@@ -11,24 +11,35 @@
   <script src="/socket.io/socket.io.js"></script>
   <style>
     :root {
-      --bg-deepest: #0b0e14;
-      --bg-deep: #0f1218;
-      --bg-panel: #121721;
-      --bg-surface: #161b26;
-      --bg-elevated: #1c2230;
-      --bg-hover: #222a3a;
-      --border-glass: rgba(255,255,255,0.05);
-      --border-glass-hover: rgba(255,255,255,0.1);
+      --bg-deepest: #090d16;
+      --bg-deep: #0d1527;
+      --bg-panel: #0f1923;
+      --bg-surface: rgba(15,25,40,0.6);
+      --bg-elevated: rgba(20,30,50,0.7);
+      --bg-hover: rgba(255,255,255,0.04);
+      --border-glass: rgba(255,255,255,0.06);
+      --border-glass-hover: rgba(255,255,255,0.12);
+      --accent-blue: #3b82f6;
+      --accent-indigo: #6366f1;
+      --accent-green: #22c55e;
+      --accent-red: #ef4444;
       --neon-blue: #6C63FF;
       --neon-pink: #FF6584;
       --neon-green: #23a55a;
       --neon-green-glow: rgba(35,165,90,0.4);
-      --text-primary: #e4e6eb;
-      --text-secondary: #949ba4;
-      --text-muted: #5e6772;
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
     }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; overflow: hidden; background: var(--bg-deepest); color: var(--text-primary); }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #090d16 0%, #0d1527 40%, #0a192f 100%);
+      overflow: hidden;
+      color: var(--text-primary);
+    }
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
@@ -36,23 +47,69 @@
     ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
 
-    /* Server icons */
-    .server-icon { transition: all 0.25s cubic-bezier(.4,0,.2,1); }
-    .server-icon:hover { border-radius: 35%; transform: scale(1.08); }
-    .server-icon.active { border-radius: 35%; }
-    .server-pill { transition: height 0.2s ease-out; }
+    /* Server Icons */
+    .server-icon {
+      border-radius: 50%;
+      transition: all 0.3s cubic-bezier(.4,0,.2,1);
+    }
+    .server-icon:hover {
+      border-radius: 35%;
+      transform: scale(1.08);
+      box-shadow: 0 0 16px rgba(108,99,255,0.35);
+    }
+    .server-icon.active {
+      border-radius: 35%;
+      box-shadow: 0 0 16px rgba(108,99,255,0.4);
+    }
+    .server-pill {
+      transition: height 0.2s ease-out;
+    }
 
-    /* Channels */
-    .channel-item { border-left: 2px solid transparent; transition: all 0.2s ease; }
-    .channel-item:hover { background-color: var(--bg-hover) !important; padding-left: 14px; }
-    .channel-item.active { border-left-color: var(--neon-blue); background-color: var(--bg-elevated) !important; }
-    .channel-item.voice-active { background-color: rgba(108,99,255,0.1) !important; border-left-color: var(--neon-blue) !important; }
-    .channel-item.voice-active span { color: var(--neon-blue) !important; }
+    /* Channel Sidebar */
+    #channel-sidebar {
+      background: var(--bg-panel);
+      border-right: 1px solid var(--border-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    .channel-item {
+      border-left: 2px solid transparent;
+      transition: all 0.2s ease;
+      border-radius: 10px;
+      padding: 6px 8px;
+    }
+    .channel-item:hover {
+      background-color: rgba(255,255,255,0.05) !important;
+      padding-left: 14px;
+    }
+    .channel-item.active {
+      border-left-color: var(--accent-blue);
+      background-color: rgba(255,255,255,0.08) !important;
+      border-radius: 10px;
+    }
+    .channel-item.voice-active {
+      background-color: rgba(108,99,255,0.1) !important;
+      border-left-color: var(--accent-blue) !important;
+    }
+    .channel-item.voice-active span {
+      color: var(--accent-blue) !important;
+    }
 
     /* Messages */
-    .message { transition: background-color 0.15s ease; border-radius: 4px; margin: 1px 8px; }
-    .message:hover { background-color: rgba(255,255,255,0.03); }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .message {
+      transition: background-color 0.15s ease;
+      border-radius: 10px;
+      margin: 1px 0;
+      padding: 2px 8px;
+    }
+    .message:hover {
+      background-color: rgba(255,255,255,0.02);
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
     .message-new { animation: fadeIn 0.25s ease-out; }
 
     /* Typing dots */
@@ -62,15 +119,38 @@
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
 
     /* Modals */
-    .modal-backdrop { background: rgba(0,0,0,0.75); backdrop-filter: blur(12px); }
-    @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+    .modal-backdrop {
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
     .shake { animation: shake 0.3s ease-in-out; }
 
-    /* Voice cards */
-    .voice-card { transition: all 0.2s ease; border: 1px solid var(--border-glass); background: var(--bg-surface); backdrop-filter: blur(12px); }
-    .voice-card:hover { border-color: var(--border-glass-hover); background: var(--bg-elevated); }
-    .voice-card.speaking { border-color: var(--neon-green) !important; background: rgba(35,165,90,0.08) !important; box-shadow: 0 0 0 2px rgba(35,165,90,0.2), 0 0 20px var(--neon-green-glow), 0 0 40px rgba(35,165,90,0.15); }
-    .voice-card.speaking img { box-shadow: 0 0 0 3px var(--neon-green), 0 0 15px var(--neon-green-glow); }
+    /* Voice Cards */
+    .voice-card {
+      transition: all 0.2s ease;
+      border: 1px solid var(--border-glass);
+      background: var(--bg-surface);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+    }
+    .voice-card:hover {
+      border-color: var(--border-glass-hover);
+      background: var(--bg-elevated);
+    }
+    .voice-card.speaking {
+      border-color: var(--neon-green) !important;
+      background: rgba(35,165,90,0.06) !important;
+      box-shadow: 0 0 0 2px rgba(35,165,90,0.2), 0 0 24px var(--neon-green-glow), 0 0 48px rgba(35,165,90,0.12);
+    }
+    .voice-card.speaking img {
+      box-shadow: 0 0 0 3px var(--neon-green), 0 0 20px var(--neon-green-glow);
+    }
     @keyframes speakPulse {
       0%, 100% { box-shadow: 0 0 0 3px var(--neon-green), 0 0 12px var(--neon-green-glow); }
       50% { box-shadow: 0 0 0 5px rgba(35,165,90,0.3), 0 0 25px rgba(35,165,90,0.3); }
@@ -85,39 +165,63 @@
     /* Live badge */
     .live-badge {
       display: inline-flex; align-items: center; gap: 3px;
-      background: #ed4245; color: #fff; font-size: 9px; font-weight: 700;
-      padding: 1px 6px; border-radius: 3px; letter-spacing: 0.5px;
+      background: var(--accent-red); color: #fff; font-size: 9px; font-weight: 700;
+      padding: 1px 6px; border-radius: 9999px; letter-spacing: 0.5px;
       animation: livePulse 1.5s ease-in-out infinite;
       text-transform: uppercase;
     }
-    @keyframes livePulse { 0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(237,66,69,0.5); } 50% { opacity: 0.6; box-shadow: 0 0 12px rgba(237,66,69,0.8); } }
-    .live-badge::before { content: ''; width: 5px; height: 5px; background: #fff; border-radius: 50%; }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+      50% { opacity: 0.6; box-shadow: 0 0 12px rgba(239,68,68,0.8); }
+    }
+    .live-badge::before {
+      content: ''; width: 5px; height: 5px; background: #fff; border-radius: 50%;
+    }
 
-    /* Members panel */
+    /* Members Panel */
     #members-panel {
-      width: 240px; background: var(--bg-panel); border-left: 1px solid var(--border-glass);
-      overflow-y: auto; flex-shrink: 0; transition: width 0.3s ease, opacity 0.3s ease;
-      backdrop-filter: blur(12px);
+      width: 260px;
+      background: rgba(15,25,40,0.4);
+      border-left: 1px solid var(--border-glass);
+      overflow-y: auto;
+      flex-shrink: 0;
+      transition: width 0.3s ease, opacity 0.3s ease;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
     }
     #members-panel.collapsed { width: 0; overflow: hidden; opacity: 0; }
-    .member-item { display: flex; align-items: center; padding: 6px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s ease; }
+    .member-item {
+      display: flex; align-items: center; padding: 6px 8px;
+      border-radius: 10px; cursor: pointer; transition: background 0.15s ease;
+    }
     .member-item:hover { background: rgba(255,255,255,0.04); }
     .member-item .member-avatar { position: relative; }
-    .member-item .status-dot { position: absolute; bottom: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg-panel); }
-    .status-dot.online { background: var(--neon-green); box-shadow: 0 0 6px rgba(35,165,90,0.5); }
+    .member-item .status-dot {
+      position: absolute; bottom: -1px; right: -1px;
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid var(--bg-panel);
+    }
+    .status-dot.online {
+      background: var(--neon-green);
+      box-shadow: 0 0 6px rgba(35,165,90,0.5);
+    }
     .status-dot.idle { background: #f0b232; }
-    .status-dot.dnd { background: #ed4245; }
-    .status-dot.offline { background: #5e6772; }
+    .status-dot.dnd { background: var(--accent-red); }
+    .status-dot.offline { background: var(--text-muted); }
 
     /* Video PiP */
     #video-pip-container {
       display: none; position: fixed; bottom: 80px; right: 24px; z-index: 100;
-      width: 320px; height: 180px; border-radius: 12px; overflow: hidden;
+      width: 320px; height: 180px; border-radius: 16px; overflow: hidden;
       background: #000; border: 1px solid rgba(108,99,255,0.3);
       box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(108,99,255,0.15);
       cursor: pointer; transition: all 0.25s ease;
     }
-    #video-pip-container:hover { border-color: var(--neon-blue); box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 30px rgba(108,99,255,0.25); transform: scale(1.02); }
+    #video-pip-container:hover {
+      border-color: var(--neon-blue);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 30px rgba(108,99,255,0.25);
+      transform: scale(1.02);
+    }
     #video-pip-container video { width: 100%; height: 100%; object-fit: contain; }
     #video-pip-container .pip-overlay {
       position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 12px;
@@ -128,11 +232,14 @@
     #video-pip-container:hover .pip-overlay { opacity: 1; }
     #video-pip-container .pip-overlay span { font-size: 11px; color: #fff; font-weight: 500; }
     #video-pip-container .pip-overlay button {
-      background: rgba(255,255,255,0.1); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
-      color: white; border-radius: 6px; padding: 4px 8px; cursor: pointer;
+      background: rgba(255,255,255,0.1); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white; border-radius: 8px; padding: 4px 8px; cursor: pointer;
       display: flex; align-items: center; gap: 4px; font-size: 10px; transition: all 0.15s ease;
     }
-    #video-pip-container .pip-overlay button:hover { background: rgba(108,99,255,0.6); border-color: rgba(108,99,255,0.4); }
+    #video-pip-container .pip-overlay button:hover {
+      background: rgba(108,99,255,0.6); border-color: rgba(108,99,255,0.4);
+    }
     #video-pip-container .pip-close {
       position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5);
       backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
@@ -141,7 +248,7 @@
       transition: all 0.15s ease;
     }
     #video-pip-container:hover .pip-close { display: flex; }
-    #video-pip-container .pip-close:hover { background: rgba(237,66,69,0.6); }
+    #video-pip-container .pip-close:hover { background: rgba(239,68,68,0.6); }
 
     /* Video expanded */
     #video-expanded-container {
@@ -151,73 +258,118 @@
     #video-expanded-container.active { display: flex; }
     #video-expanded-container video { flex: 1; width: 100%; object-fit: contain; background: #000; }
     #video-expanded-container .expanded-bar {
-      height: 44px; background: var(--bg-panel); display: flex; align-items: center;
+      height: 44px; background: rgba(15,25,40,0.8); display: flex; align-items: center;
       padding: 0 16px; justify-content: space-between; flex-shrink: 0;
-      border-bottom: 1px solid var(--border-glass); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-glass); backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
     }
     #video-expanded-container .expanded-bar span { color: var(--text-primary); font-size: 13px; font-weight: 600; }
     #video-expanded-container .expanded-bar button {
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06); color: var(--text-primary);
-      border-radius: 6px; padding: 5px 12px; cursor: pointer; display: flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-primary);
+      border-radius: 8px; padding: 5px 12px; cursor: pointer;
+      display: flex; align-items: center; gap: 5px;
       font-size: 12px; font-weight: 500; transition: all 0.15s ease;
     }
-    #video-expanded-container .expanded-bar button:hover { background: rgba(108,99,255,0.4); border-color: rgba(108,99,255,0.3); }
+    #video-expanded-container .expanded-bar button:hover {
+      background: rgba(108,99,255,0.4); border-color: rgba(108,99,255,0.3);
+    }
 
     /* ═══ SETTINGS MODAL ═══ */
     #settings-modal { position: fixed; inset: 0; z-index: 200; display: none; }
     #settings-modal.open { display: flex; }
-    #settings-modal .settings-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); }
+    #settings-modal .settings-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
     #settings-modal .settings-wrapper { position: relative; display: flex; width: 100%; height: 100%; z-index: 1; }
     #settings-modal .settings-sidebar {
-      width: 240px; background: var(--bg-panel); padding: 60px 12px 20px 20px;
-      overflow-y: auto; flex-shrink: 0; border-right: 1px solid var(--border-glass);
+      width: 240px; background: rgba(15,25,40,0.6); padding: 60px 12px 20px 20px;
+      overflow-y: auto; flex-shrink: 0;
+      border-right: 1px solid var(--border-glass);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
     }
     #settings-modal .settings-sidebar .user-card {
       display: flex; align-items: center; gap: 10px; padding: 10px;
-      margin-bottom: 16px; background: var(--bg-surface); border-radius: 10px;
+      margin-bottom: 16px; background: var(--bg-surface); border-radius: 12px;
       border: 1px solid var(--border-glass);
     }
-    #settings-modal .settings-sidebar .user-card img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--neon-blue); }
+    #settings-modal .settings-sidebar .user-card img {
+      width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--neon-blue);
+    }
     #settings-modal .settings-sidebar .user-card .name { color: var(--text-primary); font-size: 14px; font-weight: 600; }
     #settings-modal .settings-sidebar .user-card .discriminator { color: var(--text-secondary); font-size: 12px; }
     #settings-modal .settings-sidebar .search-box {
-      width: 100%; padding: 8px 10px; background: var(--bg-surface); border: 1px solid var(--border-glass);
-      border-radius: 6px; color: var(--text-primary); font-size: 13px; margin-bottom: 12px; outline: none;
-      transition: border-color 0.2s ease;
+      width: 100%; padding: 8px 10px; background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px; color: var(--text-primary); font-size: 13px;
+      margin-bottom: 12px; outline: none; transition: border-color 0.2s ease;
     }
-    #settings-modal .settings-sidebar .search-box:focus { border-color: rgba(108,99,255,0.4); }
+    #settings-modal .settings-sidebar .search-box:focus {
+      border-color: rgba(108,99,255,0.4);
+      box-shadow: 0 0 0 3px rgba(108,99,255,0.08);
+    }
     #settings-modal .settings-sidebar .search-box::placeholder { color: var(--text-muted); }
-    #settings-modal .settings-sidebar .section-label { color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px; margin-top: 8px; }
+    #settings-modal .settings-sidebar .section-label {
+      color: var(--text-muted); font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px; margin-top: 8px;
+    }
     #settings-modal .settings-sidebar .nav-item {
-      padding: 8px 10px; border-radius: 6px; font-size: 14px; color: var(--text-secondary);
+      padding: 8px 10px; border-radius: 10px; font-size: 14px; color: var(--text-secondary);
       cursor: pointer; transition: all 0.2s ease; margin-bottom: 2px; font-weight: 500;
     }
-    #settings-modal .settings-sidebar .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
-    #settings-modal .settings-sidebar .nav-item.active { background: var(--bg-elevated); color: #fff; border-left: 3px solid var(--neon-blue); }
-    #settings-modal .settings-sidebar .divider { height: 1px; background: var(--border-glass); margin: 8px 0; }
+    #settings-modal .settings-sidebar .nav-item:hover {
+      background: var(--bg-hover); color: var(--text-primary);
+    }
+    #settings-modal .settings-sidebar .nav-item.active {
+      background: rgba(255,255,255,0.1); color: #fff;
+      border-left: 3px solid var(--accent-blue);
+    }
+    #settings-modal .settings-sidebar .divider {
+      height: 1px; background: var(--border-glass); margin: 8px 0;
+    }
     #settings-modal .settings-content {
-      flex: 1; overflow-y: auto; padding: 40px 60px; background: var(--bg-deep);
+      flex: 1; overflow-y: auto; padding: 40px 60px;
+      background: rgba(10,13,22,0.4);
     }
     #settings-modal .settings-close {
       position: fixed; top: 20px; right: 30px; z-index: 10; width: 38px; height: 38px;
-      border-radius: 50%; border: 2px solid var(--text-muted); display: flex; align-items: center;
-      justify-content: center; color: var(--text-secondary); cursor: pointer;
+      border-radius: 50%; border: 2px solid var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-secondary); cursor: pointer;
       transition: all 0.25s ease; background: transparent;
     }
-    #settings-modal .settings-close:hover { border-color: var(--text-primary); color: #fff; transform: rotate(90deg); }
+    #settings-modal .settings-close:hover {
+      border-color: var(--text-primary); color: #fff; transform: rotate(90deg);
+    }
     #settings-modal .settings-close span { font-size: 12px; font-weight: 600; }
     #settings-modal h2 { color: var(--text-primary); font-size: 20px; font-weight: 700; margin-bottom: 20px; }
-    #settings-modal h3 { color: var(--text-primary); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    #settings-modal h3 {
+      color: var(--text-primary); font-size: 14px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;
+    }
     #settings-modal .setting-group { margin-bottom: 28px; }
-    #settings-modal .setting-label { color: var(--text-secondary); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    #settings-modal .setting-label {
+      color: var(--text-secondary); font-size: 12px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+    }
     #settings-modal .device-select {
-      width: 100%; padding: 10px 12px; background: var(--bg-surface); border: 1px solid var(--border-glass);
-      border-radius: 6px; color: var(--text-primary); font-size: 14px; outline: none; cursor: pointer;
-      appearance: none; transition: border-color 0.2s ease;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23949ba4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      width: 100%; padding: 10px 12px; background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px; color: var(--text-primary); font-size: 14px;
+      outline: none; cursor: pointer; appearance: none;
+      transition: border-color 0.2s ease;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 12px center;
     }
     #settings-modal .device-select:hover { border-color: var(--neon-blue); }
+    #settings-modal .device-select:focus {
+      border-color: var(--neon-blue);
+      box-shadow: 0 0 0 3px rgba(108,99,255,0.08);
+    }
     #settings-modal .device-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     #settings-modal .range-slider {
       -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px;
@@ -228,87 +380,328 @@
       background: var(--neon-blue); cursor: pointer; border: none;
       box-shadow: 0 0 8px rgba(108,99,255,0.4);
     }
-    #settings-modal .range-slider::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--neon-blue); cursor: pointer; border: none; }
+    #settings-modal .range-slider::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--neon-blue); cursor: pointer; border: none;
+    }
     #settings-modal .mic-test-row { display: flex; align-items: center; gap: 12px; }
     #settings-modal .mic-test-btn {
       padding: 8px 20px; background: linear-gradient(135deg, var(--neon-blue), #7c73ff);
-      color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+      color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
       cursor: pointer; white-space: nowrap; transition: all 0.2s ease;
       box-shadow: 0 4px 12px rgba(108,99,255,0.3);
     }
-    #settings-modal .mic-test-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(108,99,255,0.4); }
-    #settings-modal .mic-test-btn.testing { background: linear-gradient(135deg, #ed4245, #c03537); box-shadow: 0 4px 12px rgba(237,66,69,0.3); }
-    #settings-modal .mic-test-btn.testing:hover { box-shadow: 0 6px 20px rgba(237,66,69,0.4); }
+    #settings-modal .mic-test-btn:hover {
+      transform: translateY(-1px); box-shadow: 0 6px 20px rgba(108,99,255,0.4);
+    }
+    #settings-modal .mic-test-btn.testing {
+      background: linear-gradient(135deg, var(--accent-red), #c03537);
+      box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+    }
+    #settings-modal .mic-test-btn.testing:hover { box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
     #settings-modal .mic-bars { display: flex; align-items: flex-end; gap: 2px; height: 24px; }
-    #settings-modal .mic-bar { width: 4px; background: var(--neon-blue); border-radius: 2px; transition: height 0.05s; min-height: 3px; }
+    #settings-modal .mic-bar {
+      width: 4px; background: var(--neon-blue); border-radius: 2px;
+      transition: height 0.05s; min-height: 3px;
+    }
     #settings-modal .input-profile-option {
       display: flex; align-items: flex-start; gap: 12px; padding: 12px;
-      border: 1px solid var(--border-glass); border-radius: 8px; margin-bottom: 8px;
+      border: 1px solid var(--border-glass); border-radius: 10px; margin-bottom: 8px;
       cursor: pointer; transition: all 0.2s ease; background: var(--bg-surface);
     }
-    #settings-modal .input-profile-option:hover { background: var(--bg-elevated); border-color: var(--border-glass-hover); }
-    #settings-modal .input-profile-option.selected { border-color: var(--neon-blue); background: rgba(108,99,255,0.08); }
-    #settings-modal .input-profile-option input[type="radio"] { accent-color: var(--neon-blue); margin-top: 2px; flex-shrink: 0; }
+    #settings-modal .input-profile-option:hover {
+      background: var(--bg-elevated); border-color: var(--border-glass-hover);
+    }
+    #settings-modal .input-profile-option.selected {
+      border-color: var(--neon-blue); background: rgba(108,99,255,0.08);
+    }
+    #settings-modal .input-profile-option input[type="radio"] {
+      accent-color: var(--neon-blue); margin-top: 2px; flex-shrink: 0;
+    }
     #settings-modal .input-profile-option .profile-title { color: var(--text-primary); font-size: 14px; font-weight: 600; }
     #settings-modal .input-profile-option .profile-desc { color: var(--text-secondary); font-size: 12px; margin-top: 2px; }
     #settings-modal .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
     #settings-modal .toggle-switch { position: relative; width: 40px; height: 22px; cursor: pointer; flex-shrink: 0; }
     #settings-modal .toggle-switch input { opacity: 0; width: 0; height: 0; }
-    #settings-modal .toggle-slider { position: absolute; inset: 0; background: #4e5058; border-radius: 11px; transition: background 0.2s; }
-    #settings-modal .toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform 0.2s; }
+    #settings-modal .toggle-slider {
+      position: absolute; inset: 0; background: #4e5058; border-radius: 11px;
+      transition: background 0.2s;
+    }
+    #settings-modal .toggle-slider::before {
+      content: ''; position: absolute; width: 16px; height: 16px;
+      left: 3px; top: 3px; background: #fff; border-radius: 50%;
+      transition: transform 0.2s;
+    }
     #settings-modal .toggle-switch input:checked + .toggle-slider { background: var(--neon-green); }
     #settings-modal .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
-    #settings-modal .sensitivity-bar { width: 100%; height: 8px; border-radius: 4px; background: linear-gradient(to right, #f0b232 0%, #f0b232 40%, var(--neon-green) 40%, var(--neon-green) 100%); position: relative; margin-top: 8px; }
-    #settings-modal .sensitivity-indicator { position: absolute; top: -4px; width: 4px; height: 16px; background: #fff; border-radius: 2px; transition: left 0.1s; box-shadow: 0 0 4px rgba(0,0,0,0.5); }
+    #settings-modal .sensitivity-bar {
+      width: 100%; height: 8px; border-radius: 4px;
+      background: linear-gradient(to right, #f0b232 0%, #f0b232 40%, var(--neon-green) 40%, var(--neon-green) 100%);
+      position: relative; margin-top: 8px;
+    }
+    #settings-modal .sensitivity-indicator {
+      position: absolute; top: -4px; width: 4px; height: 16px;
+      background: #fff; border-radius: 2px; transition: left 0.1s;
+      box-shadow: 0 0 4px rgba(0,0,0,0.5);
+    }
 
     /* ═══ EMOJI PICKER ═══ */
     #emoji-picker {
       display: none; position: absolute; bottom: 100%; left: 0;
-      width: 352px; max-height: 420px; background: var(--bg-panel); border-radius: 12px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.6); z-index: 50; flex-direction: column;
-      border: 1px solid var(--border-glass); margin-bottom: 4px; backdrop-filter: blur(16px);
+      width: 352px; max-height: 420px;
+      background: rgba(15,25,40,0.8); border-radius: 16px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.6); z-index: 50;
+      flex-direction: column;
+      border: 1px solid var(--border-glass); margin-bottom: 4px;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
     }
     #emoji-picker.open { display: flex; }
-    #emoji-picker .emoji-search { padding: 10px; border-bottom: 1px solid var(--border-glass); }
-    #emoji-picker .emoji-search input {
-      width: 100%; padding: 8px 10px; background: var(--bg-surface); border: 1px solid var(--border-glass);
-      border-radius: 6px; color: var(--text-primary); font-size: 13px; outline: none; transition: border-color 0.2s ease;
+    #emoji-picker .emoji-search {
+      padding: 10px; border-bottom: 1px solid var(--border-glass);
     }
-    #emoji-picker .emoji-search input:focus { border-color: rgba(108,99,255,0.4); }
-    #emoji-picker .emoji-categories { display: flex; gap: 2px; padding: 6px 10px; border-bottom: 1px solid var(--border-glass); }
-    #emoji-picker .emoji-cat-btn { padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 16px; background: transparent; border: none; transition: all 0.15s ease; }
+    #emoji-picker .emoji-search input {
+      width: 100%; padding: 8px 10px; background: var(--bg-surface);
+      border: 1px solid var(--border-glass);
+      border-radius: 10px; color: var(--text-primary); font-size: 13px;
+      outline: none; transition: border-color 0.2s ease;
+    }
+    #emoji-picker .emoji-search input:focus {
+      border-color: rgba(108,99,255,0.4);
+      box-shadow: 0 0 0 3px rgba(108,99,255,0.08);
+    }
+    #emoji-picker .emoji-categories {
+      display: flex; gap: 2px; padding: 6px 10px;
+      border-bottom: 1px solid var(--border-glass);
+    }
+    #emoji-picker .emoji-cat-btn {
+      padding: 4px 8px; border-radius: 8px; cursor: pointer;
+      font-size: 16px; background: transparent; border: none; transition: all 0.15s ease;
+    }
     #emoji-picker .emoji-cat-btn:hover { background: var(--bg-hover); }
     #emoji-picker .emoji-cat-btn.active { background: var(--bg-elevated); }
-    #emoji-picker .emoji-grid { flex: 1; overflow-y: auto; padding: 8px 10px; display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px; }
+    #emoji-picker .emoji-grid {
+      flex: 1; overflow-y: auto; padding: 8px 10px;
+      display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px;
+    }
     #emoji-picker .emoji-grid::-webkit-scrollbar { width: 6px; }
-    #emoji-picker .emoji-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+    #emoji-picker .emoji-grid::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.08); border-radius: 3px;
+    }
     #emoji-picker .emoji-item {
       width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-      border-radius: 6px; cursor: pointer; font-size: 22px; transition: all 0.15s ease;
+      border-radius: 8px; cursor: pointer; font-size: 22px; transition: all 0.15s ease;
     }
-    #emoji-picker .emoji-item:hover { background: var(--bg-hover); transform: scale(1.2); }
+    #emoji-picker .emoji-item:hover {
+      background: rgba(255,255,255,0.05); transform: scale(1.15);
+    }
     #emoji-picker .emoji-section-label {
-      grid-column: 1 / -1; font-size: 11px; font-weight: 700; color: var(--text-muted);
+      grid-column: 1 / -1; font-size: 11px; font-weight: 700;
+      color: var(--text-muted);
       text-transform: uppercase; padding: 8px 0 4px; letter-spacing: 0.5px;
+    }
+
+    /* ═══ AUTH SCREEN ═══ */
+    #auth-screen { background: var(--bg-deepest) !important; }
+    #auth-screen > div > div {
+      background: rgba(15,25,40,0.6) !important;
+      backdrop-filter: blur(32px) saturate(1.5) !important;
+      -webkit-backdrop-filter: blur(32px) saturate(1.5) !important;
+      border: 1px solid var(--border-glass) !important;
+      border-radius: 24px !important;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset,
+                  0 0 40px rgba(108,99,255,0.08) !important;
+    }
+    #auth-screen::before {
+      content: ''; position: fixed; inset: 0; z-index: 0;
+      background: radial-gradient(ellipse at 20% 50%, rgba(108,99,255,0.2) 0%, transparent 50%),
+                  radial-gradient(ellipse at 80% 20%, rgba(255,101,132,0.12) 0%, transparent 50%),
+                  radial-gradient(ellipse at 50% 80%, rgba(108,99,255,0.08) 0%, transparent 50%);
+      animation: authGlow 8s ease-in-out infinite alternate; pointer-events: none;
+    }
+    @keyframes authGlow { 0% { opacity: 0.5; } 100% { opacity: 1; } }
+    #auth-screen input {
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border-glass) !important;
+      transition: border-color 0.2s, box-shadow 0.2s !important;
+      color: var(--text-primary) !important;
+      border-radius: 12px !important;
+    }
+    #auth-screen input:focus {
+      border-color: var(--accent-blue) !important;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+    }
+    #auth-screen button[type="submit"] {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)) !important;
+      box-shadow: 0 4px 15px rgba(108,99,255,0.4) !important;
+      transition: all 0.25s !important;
+      border-radius: 12px !important;
+    }
+    #auth-screen button[type="submit"]:hover {
+      transform: translateY(-2px) !important;
+      box-shadow: 0 8px 25px rgba(108,99,255,0.5) !important;
+    }
+    #auth-screen button[type="submit"]:active { transform: translateY(0) !important; }
+
+    @keyframes logoPulse {
+      0%, 100% { box-shadow: 0 0 30px rgba(108,99,255,0.5), 0 0 60px rgba(255,101,132,0.3); }
+      50% { box-shadow: 0 0 40px rgba(108,99,255,0.7), 0 0 80px rgba(255,101,132,0.5); }
+    }
+
+    /* ═══ MAIN LAYOUT ═══ */
+    #chat-screen { background: var(--bg-deep) !important; }
+
+    /* Server sidebar */
+    #server-sidebar {
+      background: linear-gradient(180deg, var(--bg-deepest) 0%, var(--bg-panel) 50%, var(--bg-deepest) 100%) !important;
+      border-right: 1px solid var(--border-glass) !important;
+    }
+
+    /* Channel sidebar */
+    #channel-sidebar {
+      background: var(--bg-panel) !important;
+      border-right: 1px solid var(--border-glass) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+    }
+
+    /* Channel header */
+    .h-12.px-4.flex.items-center.border-b {
+      background: rgba(15,25,40,0.8) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-bottom: 1px solid var(--border-glass) !important;
+    }
+
+    /* Voice connected panel */
+    #voice-connected-panel {
+      background: rgba(15,25,40,0.95) !important;
+      backdrop-filter: blur(16px) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      border-top: 1px solid var(--border-glass) !important;
+    }
+    #voice-connected-panel button {
+      border-radius: 10px !important; font-weight: 500 !important;
+      transition: all 0.2s ease !important;
+    }
+    #voice-connected-panel button:hover { transform: translateY(-1px); }
+    #disconnect-voice-btn {
+      background: linear-gradient(135deg, var(--accent-red), #c03537) !important;
+      box-shadow: 0 2px 8px rgba(239,68,68,0.3) !important;
+    }
+    #disconnect-voice-btn:hover { box-shadow: 0 4px 12px rgba(239,68,68,0.4) !important; }
+
+    /* Modals */
+    .modal-backdrop { backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important; }
+    #create-server-modal > div, #join-server-modal > div, #invite-modal > div, #create-channel-modal > div {
+      background: rgba(15,25,40,0.8) !important;
+      backdrop-filter: blur(24px) !important;
+      -webkit-backdrop-filter: blur(24px) !important;
+      border: 1px solid var(--border-glass) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(108,99,255,0.05) !important;
+    }
+    #create-server-modal input, #join-server-modal input, #create-channel-modal input,
+    #create-server-modal select, #create-channel-modal select {
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border-glass) !important;
+      color: var(--text-primary) !important;
+      border-radius: 10px !important;
+      transition: border-color 0.2s, box-shadow 0.2s !important;
+    }
+    #create-server-modal input:focus, #join-server-modal input:focus,
+    #create-channel-modal input:focus, #create-server-modal select:focus,
+    #create-channel-modal select:focus {
+      border-color: var(--accent-blue) !important;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.15) !important;
+    }
+    #create-server-btn, #create-channel-btn {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-indigo)) !important;
+      box-shadow: 0 4px 12px rgba(108,99,255,0.3) !important;
+      transition: all 0.2s !important;
+      border-radius: 12px !important;
+    }
+    #create-server-btn:hover, #create-channel-btn:hover {
+      box-shadow: 0 6px 20px rgba(108,99,255,0.4) !important;
+      transform: translateY(-1px) !important;
+    }
+    #join-server-btn {
+      background: linear-gradient(135deg, var(--neon-green), #1a8045) !important;
+      box-shadow: 0 4px 12px rgba(35,165,90,0.3) !important;
+      transition: all 0.2s !important;
+      border-radius: 12px !important;
+    }
+    #join-server-btn:hover {
+      box-shadow: 0 6px 20px rgba(35,165,90,0.4) !important;
+      transform: translateY(-1px) !important;
+    }
+
+    /* Message input */
+    .flex.items-center.bg-gray-600 {
+      background: var(--bg-surface) !important;
+      border: 1px solid var(--border-glass) !important;
+      border-radius: 16px !important;
+      transition: border-color 0.2s, box-shadow 0.2s !important;
+    }
+    .flex.items-center.bg-gray-600:focus-within {
+      border-color: rgba(108,99,255,0.4) !important;
+      box-shadow: 0 0 0 3px rgba(108,99,255,0.08) !important;
+    }
+
+    /* User bar */
+    .bg-gray-950 {
+      background: var(--bg-deepest) !important;
+      border-top: 1px solid var(--border-glass) !important;
+    }
+
+    /* Invite button */
+    #show-invite-btn {
+      background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(108,99,255,0.08)) !important;
+      border: 1px solid rgba(108,99,255,0.25) !important;
+      border-radius: 10px !important; transition: all 0.2s !important;
+    }
+    #show-invite-btn:hover {
+      background: linear-gradient(135deg, rgba(108,99,255,0.25), rgba(108,99,255,0.15)) !important;
+    }
+
+    /* Copy invite */
+    #copy-invite-btn {
+      background: linear-gradient(135deg, var(--neon-blue), #7c73ff) !important;
+      border-radius: 8px !important;
     }
 
     /* ═══ MOBILE ═══ */
     @media (max-width: 768px) {
       #server-sidebar { display: none; }
-      #server-sidebar.mobile-open { display: flex; position: fixed; left: 0; top: 0; bottom: 0; z-index: 150; width: 72px; }
-      #channel-sidebar { display: none; position: fixed; left: 72px; top: 0; bottom: 0; z-index: 140; width: 240px; }
+      #server-sidebar.mobile-open {
+        display: flex; position: fixed; left: 0; top: 0; bottom: 0;
+        z-index: 150; width: 72px;
+      }
+      #channel-sidebar {
+        display: none; position: fixed; left: 72px; top: 0; bottom: 0;
+        z-index: 140; width: 240px;
+      }
       #channel-sidebar.mobile-open { display: flex; }
       #mobile-menu-btn { display: flex !important; }
-      #mobile-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 130; }
+      #mobile-overlay {
+        display: none; position: fixed; inset: 0;
+        background: rgba(0,0,0,0.5); z-index: 130;
+      }
       #mobile-overlay.open { display: block; }
       #members-panel { display: none !important; }
       #video-pip-container { width: 200px; height: 112px; bottom: 70px; right: 12px; }
       #emoji-picker { width: calc(100vw - 32px); left: -8px; }
       .settings-wrapper { flex-direction: column; }
-      #settings-modal .settings-sidebar { width: 100%; height: auto; max-height: 200px; padding: 16px; flex-direction: row; flex-wrap: wrap; gap: 4px; overflow-x: auto; overflow-y: hidden; }
+      #settings-modal .settings-sidebar {
+        width: 100%; height: auto; max-height: 200px; padding: 16px;
+        flex-direction: row; flex-wrap: wrap; gap: 4px;
+        overflow-x: auto; overflow-y: hidden;
+      }
       #settings-modal .settings-sidebar .user-card { display: none; }
       #settings-modal .settings-sidebar .section-label { display: none; }
-      #settings-modal .settings-sidebar .nav-item { white-space: nowrap; font-size: 12px; padding: 4px 8px; }
+      #settings-modal .settings-sidebar .nav-item {
+        white-space: nowrap; font-size: 12px; padding: 4px 8px;
+      }
       #settings-modal .settings-sidebar .divider { display: none; }
       #settings-modal .settings-content { padding: 20px; }
       .device-row { grid-template-columns: 1fr !important; }
@@ -324,152 +717,12 @@
       #mobile-overlay { display: none !important; }
     }
   </style>
-
-  <!-- ═══ PREMIUM GLASS OVERRIDES ═══ -->
-  <style>
-    /* Auth screen */
-    #auth-screen { background: var(--bg-deepest) !important; }
-    #auth-screen > div > div {
-      background: rgba(18,23,33,0.9) !important; backdrop-filter: blur(24px) saturate(1.5) !important;
-      border: 1px solid var(--border-glass) !important; border-radius: 16px !important;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset,
-                  0 0 40px rgba(108,99,255,0.08) !important;
-    }
-    #auth-screen::before {
-      content: ''; position: fixed; inset: 0; z-index: 0;
-      background: radial-gradient(ellipse at 20% 50%, rgba(108,99,255,0.2) 0%, transparent 50%),
-                  radial-gradient(ellipse at 80% 20%, rgba(255,101,132,0.12) 0%, transparent 50%),
-                  radial-gradient(ellipse at 50% 80%, rgba(108,99,255,0.08) 0%, transparent 50%);
-      animation: authGlow 8s ease-in-out infinite alternate; pointer-events: none;
-    }
-    @keyframes authGlow { 0% { opacity: 0.5; } 100% { opacity: 1; } }
-    #auth-screen input {
-      background: var(--bg-surface) !important; border: 1px solid var(--border-glass) !important;
-      transition: border-color 0.2s, box-shadow 0.2s !important; color: var(--text-primary) !important;
-    }
-    #auth-screen input:focus {
-      border-color: rgba(108,99,255,0.5) !important; box-shadow: 0 0 0 3px rgba(108,99,255,0.15) !important;
-    }
-    #auth-screen button[type="submit"] {
-      background: linear-gradient(135deg, var(--neon-blue), #7c73ff) !important;
-      box-shadow: 0 4px 15px rgba(108,99,255,0.4) !important; transition: all 0.25s !important;
-    }
-    #auth-screen button[type="submit"]:hover {
-      transform: translateY(-2px) !important; box-shadow: 0 8px 25px rgba(108,99,255,0.5) !important;
-    }
-    #auth-screen button[type="submit"]:active { transform: translateY(0) !important; }
-
-    /* Main layout */
-    #chat-screen { background: var(--bg-deep) !important; }
-
-    /* Server sidebar */
-    #server-sidebar {
-      background: linear-gradient(180deg, var(--bg-deepest) 0%, var(--bg-panel) 50%, var(--bg-deepest) 100%) !important;
-      border-right: 1px solid var(--border-glass) !important;
-    }
-    .server-icon { transition: all 0.25s cubic-bezier(.4,0,.2,1) !important; }
-    .server-icon:hover { box-shadow: 0 0 16px rgba(108,99,255,0.35) !important; transform: scale(1.08); }
-    .server-icon.active { box-shadow: 0 0 16px rgba(108,99,255,0.4) !important; }
-
-    /* Channel sidebar */
-    #channel-sidebar {
-      background: var(--bg-panel) !important; border-right: 1px solid var(--border-glass) !important;
-      backdrop-filter: blur(12px) !important;
-    }
-
-    /* Channel header */
-    .h-12.px-4.flex.items-center.border-b {
-      background: rgba(18,23,33,0.95) !important; backdrop-filter: blur(12px) !important;
-      border-bottom: 1px solid var(--border-glass) !important;
-    }
-
-    /* Voice connected panel */
-    #voice-connected-panel {
-      background: rgba(18,23,33,0.95) !important; backdrop-filter: blur(12px) !important;
-      border-top: 1px solid var(--border-glass) !important;
-    }
-    #voice-connected-panel button {
-      border-radius: 8px !important; font-weight: 500 !important; transition: all 0.2s ease !important;
-    }
-    #voice-connected-panel button:hover { transform: translateY(-1px); }
-    #disconnect-voice-btn { background: linear-gradient(135deg, #ed4245, #c03537) !important; box-shadow: 0 2px 8px rgba(237,66,69,0.3) !important; }
-    #disconnect-voice-btn:hover { box-shadow: 0 4px 12px rgba(237,66,69,0.4) !important; }
-
-    /* Voice cards */
-    .voice-card { border: 1px solid var(--border-glass) !important; background: var(--bg-surface) !important; backdrop-filter: blur(12px) !important; }
-    .voice-card.speaking {
-      border-color: var(--neon-green) !important;
-      background: rgba(35,165,90,0.06) !important;
-      box-shadow: 0 0 0 2px rgba(35,165,90,0.2), 0 0 24px var(--neon-green-glow), 0 0 48px rgba(35,165,90,0.12) !important;
-    }
-    .voice-card.speaking img { box-shadow: 0 0 0 3px var(--neon-green), 0 0 20px var(--neon-green-glow) !important; }
-
-    /* Modals */
-    .modal-backdrop { backdrop-filter: blur(12px) !important; }
-    #create-server-modal > div, #join-server-modal > div, #invite-modal > div, #create-channel-modal > div {
-      background: rgba(18,23,33,0.95) !important; backdrop-filter: blur(20px) !important;
-      border: 1px solid var(--border-glass) !important; border-radius: 16px !important;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.5) !important;
-    }
-    #create-server-modal input, #join-server-modal input, #create-channel-modal input, #create-server-modal select, #create-channel-modal select {
-      background: var(--bg-surface) !important; border: 1px solid var(--border-glass) !important;
-      color: var(--text-primary) !important; transition: border-color 0.2s, box-shadow 0.2s !important;
-    }
-    #create-server-modal input:focus, #join-server-modal input:focus, #create-channel-modal input:focus, #create-server-modal select:focus, #create-channel-modal select:focus {
-      border-color: rgba(108,99,255,0.5) !important; box-shadow: 0 0 0 3px rgba(108,99,255,0.15) !important;
-    }
-    #create-server-btn, #create-channel-btn {
-      background: linear-gradient(135deg, var(--neon-blue), #7c73ff) !important;
-      box-shadow: 0 4px 12px rgba(108,99,255,0.3) !important; transition: all 0.2s !important;
-    }
-    #create-server-btn:hover, #create-channel-btn:hover {
-      box-shadow: 0 6px 20px rgba(108,99,255,0.4) !important; transform: translateY(-1px) !important;
-    }
-    #join-server-btn {
-      background: linear-gradient(135deg, var(--neon-green), #1a8045) !important;
-      box-shadow: 0 4px 12px rgba(35,165,90,0.3) !important; transition: all 0.2s !important;
-    }
-    #join-server-btn:hover { box-shadow: 0 6px 20px rgba(35,165,90,0.4) !important; transform: translateY(-1px) !important; }
-
-    /* Message input */
-    .flex.items-center.bg-gray-600 {
-      background: var(--bg-surface) !important; border: 1px solid var(--border-glass) !important;
-      border-radius: 12px !important; transition: border-color 0.2s, box-shadow 0.2s !important;
-    }
-    .flex.items-center.bg-gray-600:focus-within {
-      border-color: rgba(108,99,255,0.4) !important; box-shadow: 0 0 0 3px rgba(108,99,255,0.08) !important;
-    }
-
-    /* User bar */
-    .bg-gray-950 {
-      background: var(--bg-deepest) !important; border-top: 1px solid var(--border-glass) !important;
-    }
-
-    /* Invite button */
-    #show-invite-btn {
-      background: linear-gradient(135deg, rgba(108,99,255,0.15), rgba(108,99,255,0.08)) !important;
-      border: 1px solid rgba(108,99,255,0.25) !important; border-radius: 8px !important; transition: all 0.2s !important;
-    }
-    #show-invite-btn:hover {
-      background: linear-gradient(135deg, rgba(108,99,255,0.25), rgba(108,99,255,0.15)) !important;
-    }
-
-    /* Copy invite */
-    #copy-invite-btn {
-      background: linear-gradient(135deg, var(--neon-blue), #7c73ff) !important; border-radius: 8px !important;
-    }
-
-    @keyframes logoPulse {
-      0%, 100% { box-shadow: 0 0 30px rgba(108,99,255,0.5), 0 0 60px rgba(255,101,132,0.3); }
-      50% { box-shadow: 0 0 40px rgba(108,99,255,0.7), 0 0 80px rgba(255,101,132,0.5); }
-    }
-  </style>
 </head>
-<body class="bg-gray-700 text-gray-300 h-screen flex">
+<body class="text-[#e2e8f0] h-screen flex">
 
   <!-- ═══ AUTH SCREEN ═════════════════════════════════════════════════════════ -->
-  <div id="auth-screen" class="fixed inset-0 bg-gray-900 modal-backdrop flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg shadow-2xl w-[420px] overflow-hidden">
+  <div id="auth-screen" class="fixed inset-0 bg-[#090d16] modal-backdrop flex items-center justify-center z-50">
+    <div class="bg-[rgba(15,25,40,0.6)] backdrop-blur-3xl rounded-3xl shadow-2xl w-[420px] overflow-hidden border border-[rgba(255,255,255,0.06)]" style="box-shadow:0 25px 60px rgba(0,0,0,0.6),0 0 40px rgba(108,99,255,0.08);">
       <div class="p-8">
         <div class="text-center mb-6">
           <div style="width:64px;height:64px;margin:0 auto 16px;border-radius:16px;background:linear-gradient(135deg,#6C63FF,#FF6584);display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(108,99,255,0.5),0 0 60px rgba(255,101,132,0.3);position:relative;animation:logoPulse 3s ease-in-out infinite;">
@@ -485,24 +738,24 @@
             <div style="position:absolute;inset:-2px;border-radius:18px;border:2px solid rgba(255,255,255,0.15);pointer-events:none;"></div>
           </div>
           <h1 id="auth-title" class="text-2xl font-bold" style="background:linear-gradient(135deg,#6C63FF,#FF6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">LucasVitor</h1>
-          <p id="auth-subtitle" class="text-gray-400 mt-1">Conecte-se com seus amigos</p>
+          <p id="auth-subtitle" class="text-[#94a3b8] mt-1">Conecte-se com seus amigos</p>
         </div>
-        <div id="error-message" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded mb-4 text-sm"></div>
+        <div id="error-message" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl mb-4 text-sm"></div>
         <form id="login-form" class="space-y-4">
-          <div><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Email</label><input id="login-email" type="email" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="email" required /></div>
-          <div><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Senha</label><input id="login-password" type="password" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="current-password" required /></div>
-          <button type="submit" id="login-submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded transition-colors">Entrar</button>
+          <div><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Email</label><input id="login-email" type="email" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="email" required /></div>
+          <div><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Senha</label><input id="login-password" type="password" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="current-password" required /></div>
+          <button type="submit" id="login-submit" class="w-full py-2.5 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">Entrar</button>
         </form>
         <form id="register-form" class="space-y-4 hidden">
-          <div><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Nome de Usuario</label><input id="register-username" type="text" maxlength="20" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="username" required /></div>
-          <div><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Email</label><input id="register-email" type="email" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="email" required /></div>
-          <div><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Senha</label><input id="register-password" type="password" minlength="6" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="new-password" required /></div>
-          <div><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Confirmar Senha</label><input id="register-confirm-password" type="password" minlength="6" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm" autocomplete="new-password" required /></div>
-          <button type="submit" id="register-submit" class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded transition-colors">Cadastrar</button>
+          <div><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Nome de Usuario</label><input id="register-username" type="text" maxlength="20" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="username" required /></div>
+          <div><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Email</label><input id="register-email" type="email" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="email" required /></div>
+          <div><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Senha</label><input id="register-password" type="password" minlength="6" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="new-password" required /></div>
+          <div><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Confirmar Senha</label><input id="register-confirm-password" type="password" minlength="6" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="new-password" required /></div>
+          <button type="submit" id="register-submit" class="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">Cadastrar</button>
         </form>
         <div class="mt-4 text-center">
-          <span id="auth-toggle-text" class="text-sm text-gray-400">Nao tem uma conta?</span>
-          <button id="auth-toggle-btn" class="text-sm text-indigo-400 hover:underline ml-1 font-medium">Cadastre-se</button>
+          <span id="auth-toggle-text" class="text-sm text-[#94a3b8]">Nao tem uma conta?</span>
+          <button id="auth-toggle-btn" class="text-sm text-[#6C63FF] hover:underline ml-1 font-medium">Cadastre-se</button>
         </div>
       </div>
     </div>
@@ -516,8 +769,8 @@
     <div id="mobile-overlay"></div>
 
     <!-- Server Sidebar (icons) -->
-    <div class="w-[72px] bg-gray-950 flex flex-col items-center py-3 gap-2 overflow-y-auto" id="server-sidebar">
-      <div id="mobile-menu-btn" class="server-icon w-12 h-12 bg-gray-700 hover:bg-indigo-600 rounded-[50%] items-center justify-center cursor-pointer transition-all text-white mb-2 hidden" title="Menu">
+    <div class="w-[72px] flex flex-col items-center py-3 gap-2 overflow-y-auto border-r border-[rgba(255,255,255,0.06)]" id="server-sidebar" style="background:linear-gradient(180deg,#090d16 0%,#0f1923 50%,#090d16 100%);">
+      <div id="mobile-menu-btn" class="server-icon w-12 h-12 bg-[rgba(255,255,255,0.06)] hover:bg-[#6C63FF] rounded-[50%] items-center justify-center cursor-pointer transition-all text-white mb-2 hidden" title="Menu">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </div>
       <div class="relative">
@@ -526,34 +779,34 @@
           <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="Arial Black, sans-serif" font-weight="900" font-size="9" letter-spacing="-0.5">LV</text></svg>
         </div>
       </div>
-      <div class="w-8 h-0.5 bg-gray-700 rounded-full my-1"></div>
+      <div class="w-8 h-0.5 bg-[rgba(255,255,255,0.06)] rounded-full my-1"></div>
       <div id="server-list" class="flex flex-col gap-2 items-center"></div>
-      <div class="w-8 h-0.5 bg-gray-700 rounded-full my-1"></div>
+      <div class="w-8 h-0.5 bg-[rgba(255,255,255,0.06)] rounded-full my-1"></div>
       <div class="relative">
-        <div id="add-server-btn" class="server-icon w-12 h-12 bg-gray-700 hover:bg-green-600 rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-green-500 hover:text-white" title="Criar Servidor">
+        <div id="add-server-btn" class="server-icon w-12 h-12 bg-[rgba(255,255,255,0.06)] hover:bg-green-600 rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-green-500 hover:text-white" title="Criar Servidor">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </div>
       </div>
       <div class="relative">
-        <div id="join-server-sidebar-btn" class="server-icon w-12 h-12 bg-gray-700 hover:bg-green-600 rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-green-500 hover:text-white" title="Entrar com Codigo">
+        <div id="join-server-sidebar-btn" class="server-icon w-12 h-12 bg-[rgba(255,255,255,0.06)] hover:bg-green-600 rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-green-500 hover:text-white" title="Entrar com Codigo">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
       </div>
     </div>
 
     <!-- Channel Sidebar -->
-    <div class="w-60 bg-gray-900 flex flex-col">
+    <div class="w-60 flex flex-col" id="channel-sidebar">
       <!-- Server Header -->
-      <div class="h-12 px-4 flex items-center border-b border-gray-950 shadow-md cursor-pointer hover:bg-gray-800" id="server-header">
+      <div class="h-12 px-4 flex items-center border-b border-[rgba(255,255,255,0.06)] shadow-md cursor-pointer hover:bg-[rgba(255,255,255,0.04)]" id="server-header" style="background:rgba(15,25,40,0.8);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);">
         <span class="text-white font-bold text-lg truncate flex-1" id="server-name-display">Selecione um servidor</span>
-        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        <svg class="w-4 h-4 text-[#94a3b8]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </div>
 
       <!-- Channels List -->
       <div class="flex-1 overflow-y-auto py-4 px-2">
         <div class="flex items-center justify-between px-2 mb-2">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Canais</span>
-          <button id="add-channel-btn" class="text-gray-500 hover:text-white hidden" title="Criar Canal">
+          <span class="text-xs font-semibold text-[#64748b] uppercase tracking-wider">Canais</span>
+          <button id="add-channel-btn" class="text-[#64748b] hover:text-white hidden" title="Criar Canal">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           </button>
         </div>
@@ -561,31 +814,31 @@
       </div>
 
       <!-- Voice Connected Panel -->
-      <div id="voice-connected-panel" class="hidden bg-gray-800 border-t border-gray-900 px-2 py-2">
+      <div id="voice-connected-panel" class="hidden px-2 py-2" style="background:rgba(15,25,40,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,0.06);">
         <div class="flex items-center mb-2 px-1">
           <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
           <span class="text-green-400 text-xs font-semibold uppercase flex-1">Voz Conectada</span>
         </div>
-        <div id="voice-channel-label" class="text-gray-400 text-xs px-1 mb-2 truncate"></div>
+        <div id="voice-channel-label" class="text-[#94a3b8] text-xs px-1 mb-2 truncate"></div>
         <div id="voice-users-list" class="space-y-0.5 mb-2 max-h-24 overflow-y-auto"></div>
         <div class="flex gap-1 px-1">
-          <button id="mute-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors" title="Mutar/Desmutar">
+          <button id="mute-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl text-xs transition-colors" title="Mutar/Desmutar">
             <svg id="mic-on-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
             <svg id="mic-off-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
           </button>
-          <button id="deafen-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors" title="Abafar (mutar fone + mic)">
+          <button id="deafen-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl text-xs transition-colors" title="Abafar (mutar fone + mic)">
             <svg id="ear-on-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
             <svg id="ear-off-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
-          <button id="camera-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors" title="Camera">
+          <button id="camera-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl text-xs transition-colors" title="Camera">
             <svg id="cam-on-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             <svg id="cam-off-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
-          <button id="screen-share-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-xs transition-colors" title="Compartilhar Tela">
+          <button id="screen-share-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl text-xs transition-colors" title="Compartilhar Tela">
             <svg id="screen-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             <span id="screen-btn-text">Tela</span>
           </button>
-          <button id="disconnect-voice-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-red-600 hover:bg-red-700 rounded text-xs text-white transition-colors" title="Desconectar do canal de voz">
+          <button id="disconnect-voice-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-xl text-xs text-white transition-colors" title="Desconectar do canal de voz" style="background:linear-gradient(135deg,#ef4444,#c03537);box-shadow:0 2px 8px rgba(239,68,68,0.3);">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
             Sair
           </button>
@@ -593,23 +846,23 @@
       </div>
 
       <!-- User Profile Bar -->
-      <div class="bg-gray-950 px-2 py-1.5 flex items-center">
+      <div class="px-2 py-1.5 flex items-center" style="background:var(--bg-deepest);border-top:1px solid rgba(255,255,255,0.06);">
         <img id="user-avatar" class="w-8 h-8 rounded-full mr-2 cursor-pointer hover:opacity-80 transition-opacity" alt="avatar" title="Trocar avatar" />
         <div class="flex-1 min-w-0">
           <div class="text-white text-xs font-medium truncate" id="current-username">Usuario</div>
-          <div class="text-gray-500 text-[10px]">Online</div>
+          <div class="text-[#64748b] text-[10px]">Online</div>
         </div>
         <div class="flex items-center gap-0.5">
-          <button id="user-mic-btn" class="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors" title="Microfone">
+          <button id="user-mic-btn" class="p-1.5 rounded-xl hover:bg-[rgba(255,255,255,0.04)] text-[#94a3b8] hover:text-[#e2e8f0] transition-colors" title="Microfone">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
           </button>
-          <button id="user-deafen-btn" class="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors" title="Deafen">
+          <button id="user-deafen-btn" class="p-1.5 rounded-xl hover:bg-[rgba(255,255,255,0.04)] text-[#94a3b8] hover:text-[#e2e8f0] transition-colors" title="Deafen">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
           </button>
-          <button id="logout-btn" class="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors" title="Sair">
+          <button id="logout-btn" class="p-1.5 rounded-xl hover:bg-[rgba(255,255,255,0.04)] text-[#94a3b8] hover:text-[#e2e8f0] transition-colors" title="Sair">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 116 0v1"/></svg>
           </button>
-          <button id="settings-btn" class="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors" title="Configurações">
+          <button id="settings-btn" class="p-1.5 rounded-xl hover:bg-[rgba(255,255,255,0.04)] text-[#94a3b8] hover:text-[#e2e8f0] transition-colors" title="Configurações">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           </button>
         </div>
@@ -619,37 +872,37 @@
     <!-- Main Content -->
     <div class="flex-1 flex flex-col">
       <!-- Channel Header -->
-      <div class="h-12 px-4 flex items-center border-b border-gray-950 shadow-sm bg-gray-700 flex-shrink-0">
-        <span class="text-gray-400 mr-2 text-xl">#</span>
-        <span class="text-white font-bold" id="current-channel-name">geral</span>
-        <div class="w-px h-6 bg-gray-600 mx-4"></div>
-        <span class="text-gray-400 text-sm" id="channel-topic">Selecione um canal para comecar a conversar</span>
+      <div class="h-14 px-4 flex items-center border-b border-[rgba(255,255,255,0.06)] shadow-sm flex-shrink-0" style="background:rgba(15,25,40,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);">
+        <span class="text-[#94a3b8] mr-2 text-xl">#</span>
+        <span class="text-white font-semibold" id="current-channel-name">geral</span>
+        <div class="w-px h-6 bg-[rgba(255,255,255,0.06)] mx-4"></div>
+        <span class="text-[#94a3b8] text-sm" id="channel-topic">Selecione um canal para comecar a conversar</span>
       </div>
 
       <div class="flex-1 flex overflow-hidden relative">
         <div class="flex-1 flex flex-col min-w-0">
           <!-- Voice Participants Grid -->
-          <div id="voice-grid-container" class="hidden bg-gray-800 border-b border-gray-900 overflow-y-auto p-4" style="max-height:200px;">
+          <div id="voice-grid-container" class="hidden border-b border-[rgba(255,255,255,0.06)] overflow-y-auto p-4" style="max-height:200px;background:rgba(15,25,40,0.4);">
             <div id="voice-participants-grid" class="grid gap-3 auto-rows-min" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));"></div>
           </div>
 
           <!-- Chat Messages -->
-          <div id="messages-container" class="flex-1 overflow-y-auto px-4 py-4"></div>
+          <div id="messages-container" class="flex-1 overflow-y-auto px-6 py-4"></div>
 
           <!-- Typing Indicator -->
-          <div id="typing-indicator" class="hidden px-4 py-1 text-sm text-gray-400">
-            <span class="font-medium text-gray-300" id="typing-user"></span> esta digitando
+          <div id="typing-indicator" class="hidden px-4 py-1 text-sm text-[#94a3b8]">
+            <span class="font-medium text-[#e2e8f0]" id="typing-user"></span> esta digitando
             <span class="typing-dot inline-block">.</span><span class="typing-dot inline-block">.</span><span class="typing-dot inline-block">.</span>
           </div>
 
           <!-- Reply Indicator -->
-          <div id="reply-indicator" class="hidden px-4 py-2 bg-gray-700 border-b border-gray-600 flex items-center justify-between">
+          <div id="reply-indicator" class="hidden px-4 py-2 flex items-center justify-between" style="background:rgba(20,30,50,0.7);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.06);">
             <div class="flex items-center gap-2 text-sm">
-              <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-              <span class="text-gray-400">Respondendo a</span>
+              <svg class="w-4 h-4 text-[#6C63FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+              <span class="text-[#94a3b8]">Respondendo a</span>
               <span class="text-white font-medium" id="reply-to-username"></span>
             </div>
-            <button id="cancel-reply-btn" class="text-gray-400 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            <button id="cancel-reply-btn" class="text-[#94a3b8] hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
           </div>
 
           <!-- Message Input -->
@@ -670,16 +923,16 @@
               </div>
               <div class="emoji-grid" id="emoji-grid"></div>
             </div>
-            <div class="flex items-center bg-gray-600 rounded-lg px-4">
-              <label id="upload-btn" class="text-gray-400 hover:text-white cursor-pointer mr-2 transition-colors">
+            <div class="flex items-center rounded-2xl px-4 border border-[rgba(255,255,255,0.06)]" style="background:rgba(15,25,40,0.6);backdrop-filter:blur(8px);">
+              <label id="upload-btn" class="text-[#94a3b8] hover:text-white cursor-pointer mr-2 transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 <input type="file" id="file-input" class="hidden" accept="image/*,video/*,.pdf,.txt,.zip" />
               </label>
-              <input id="message-input" type="text" placeholder="Selecione um canal para enviar mensagem" maxlength="2000" class="flex-1 bg-transparent py-3 text-white outline-none placeholder-gray-400" autocomplete="off" disabled />
-              <button id="emoji-btn" class="text-gray-400 hover:text-white ml-1 transition-colors" title="Emoji">
+              <input id="message-input" type="text" placeholder="Selecione um canal para enviar mensagem" maxlength="2000" class="flex-1 bg-transparent py-3 text-white outline-none placeholder-[#64748b]" autocomplete="off" disabled />
+              <button id="emoji-btn" class="text-[#94a3b8] hover:text-white ml-1 transition-colors" title="Emoji">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </button>
-              <button id="send-btn" class="text-gray-400 hover:text-white ml-2 transition-colors" disabled>
+              <button id="send-btn" class="text-[#94a3b8] hover:text-white ml-2 transition-colors" disabled>
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
               </button>
             </div>
@@ -690,27 +943,27 @@
         <div id="members-panel">
           <div class="p-3">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide" id="members-panel-title">Membros</h3>
-              <button id="toggle-members-btn" class="text-gray-500 hover:text-gray-300" title="Ocultar Membros">
+              <h3 class="text-xs font-semibold text-[#94a3b8] uppercase tracking-wide" id="members-panel-title">Membros</h3>
+              <button id="toggle-members-btn" class="text-[#64748b] hover:text-[#e2e8f0]" title="Ocultar Membros">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
               </button>
             </div>
             <div id="members-online-section" class="mb-3">
               <div class="flex items-center gap-1 mb-1 px-1">
-                <span class="text-[11px] font-semibold text-gray-500 uppercase">Online</span>
-                <span class="text-[11px] text-gray-600" id="members-online-count">0</span>
+                <span class="text-[11px] font-semibold text-[#64748b] uppercase">Online</span>
+                <span class="text-[11px] text-[#475569]" id="members-online-count">0</span>
               </div>
               <div id="members-online-list" class="space-y-0.5"></div>
             </div>
             <div id="members-offline-section">
               <div class="flex items-center gap-1 mb-1 px-1">
-                <span class="text-[11px] font-semibold text-gray-500 uppercase">Offline</span>
-                <span class="text-[11px] text-gray-600" id="members-offline-count">0</span>
+                <span class="text-[11px] font-semibold text-[#64748b] uppercase">Offline</span>
+                <span class="text-[11px] text-[#475569]" id="members-offline-count">0</span>
               </div>
               <div id="members-offline-list" class="space-y-0.5"></div>
             </div>
-            <div id="invite-section" class="hidden mt-3 pt-3 border-t border-gray-700">
-              <button id="show-invite-btn" class="w-full py-2 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors flex items-center justify-center gap-2">
+            <div id="invite-section" class="hidden mt-3 pt-3 border-t border-[rgba(255,255,255,0.06)]">
+              <button id="show-invite-btn" class="w-full py-2 text-white text-sm rounded-xl transition-all flex items-center justify-center gap-2" style="background:linear-gradient(135deg,rgba(108,99,255,0.15),rgba(108,99,255,0.08));border:1px solid rgba(108,99,255,0.25);">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
                 Convidar Amigos
               </button>
@@ -723,37 +976,37 @@
 
   <!-- ═══ MODALS ══════════════════════════════════════════════════════════════ -->
   <div id="create-server-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg shadow-2xl w-[440px]">
+    <div class="rounded-2xl shadow-2xl w-[440px] border border-[rgba(255,255,255,0.06)]" style="background:rgba(15,25,40,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(108,99,255,0.05);">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Criar Servidor</h2><button id="close-create-modal" class="text-gray-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <p class="text-gray-400 text-sm mb-4">Seu servidor sera onde voce e seus amigos interagem.</p>
-        <div id="create-server-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded mb-4 text-sm"></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Nome do Servidor</label><input id="server-name-input" type="text" maxlength="50" placeholder="Ex: Meu Servidor" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm" /></div>
-        <button id="create-server-btn" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded transition-colors">Criar</button>
+        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Criar Servidor</h2><button id="close-create-modal" class="text-[#94a3b8] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <p class="text-[#94a3b8] text-sm mb-4">Seu servidor sera onde voce e seus amigos interagem.</p>
+        <div id="create-server-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl mb-4 text-sm"></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Nome do Servidor</label><input id="server-name-input" type="text" maxlength="50" placeholder="Ex: Meu Servidor" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]" /></div>
+        <button id="create-server-btn" class="w-full py-2.5 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5" style="background:linear-gradient(135deg,#3b82f6,#6366f1);box-shadow:0 4px 12px rgba(108,99,255,0.3);">Criar</button>
       </div>
     </div>
   </div>
 
   <div id="join-server-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg shadow-2xl w-[440px]">
+    <div class="rounded-2xl shadow-2xl w-[440px] border border-[rgba(255,255,255,0.06)]" style="background:rgba(15,25,40,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(108,99,255,0.05);">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Entrar num Servidor</h2><button id="close-join-modal" class="text-gray-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <p class="text-gray-400 text-sm mb-4">Cole o codigo de convite abaixo.</p>
-        <div id="join-server-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded mb-4 text-sm"></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Codigo de Convite</label><input id="invite-code-input" type="text" maxlength="8" placeholder="Ex: AbCdEfGh" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono" /></div>
-        <button id="join-server-btn" class="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded transition-colors">Entrar no Servidor</button>
+        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Entrar num Servidor</h2><button id="close-join-modal" class="text-[#94a3b8] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <p class="text-[#94a3b8] text-sm mb-4">Cole o codigo de convite abaixo.</p>
+        <div id="join-server-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl mb-4 text-sm"></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Codigo de Convite</label><input id="invite-code-input" type="text" maxlength="8" placeholder="Ex: AbCdEfGh" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm font-mono border border-[rgba(255,255,255,0.06)]" /></div>
+        <button id="join-server-btn" class="w-full py-2.5 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5" style="background:linear-gradient(135deg,#22c55e,#1a8045);box-shadow:0 4px 12px rgba(35,165,90,0.3);">Entrar no Servidor</button>
       </div>
     </div>
   </div>
 
   <div id="invite-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg shadow-2xl w-[440px]">
+    <div class="rounded-2xl shadow-2xl w-[440px] border border-[rgba(255,255,255,0.06)]" style="background:rgba(15,25,40,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(108,99,255,0.05);">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Convidar Amigos</h2><button id="close-invite-modal" class="text-gray-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <p class="text-gray-400 text-sm mb-4">Envie este codigo para seus amigos.</p>
-        <div class="flex items-center bg-gray-900 rounded-lg px-4 py-3 mb-4">
+        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Convidar Amigos</h2><button id="close-invite-modal" class="text-[#94a3b8] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <p class="text-[#94a3b8] text-sm mb-4">Envie este codigo para seus amigos.</p>
+        <div class="flex items-center rounded-xl px-4 py-3 mb-4 border border-[rgba(255,255,255,0.06)]" style="background:rgba(15,25,40,0.6);">
           <span id="invite-code-display" class="text-white font-mono text-lg flex-1 select-all"></span>
-          <button id="copy-invite-btn" class="ml-2 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded transition-colors">Copiar</button>
+          <button id="copy-invite-btn" class="ml-2 px-3 py-1 text-white text-sm rounded-lg transition-colors" style="background:linear-gradient(135deg,#6C63FF,#7c73ff);">Copiar</button>
         </div>
         <p id="copy-success" class="hidden text-green-400 text-sm text-center">Codigo copiado!</p>
       </div>
@@ -761,17 +1014,17 @@
   </div>
 
   <div id="create-channel-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-lg shadow-2xl w-[440px]">
+    <div class="rounded-2xl shadow-2xl w-[440px] border border-[rgba(255,255,255,0.06)]" style="background:rgba(15,25,40,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(108,99,255,0.05);">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Criar Canal</h2><button id="close-create-channel-modal" class="text-gray-400 hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <div id="create-channel-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded mb-4 text-sm"></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Nome do Canal</label><input id="channel-name-input" type="text" maxlength="30" placeholder="Ex: musicas" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm" /></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Tipo</label>
-          <select id="channel-type-input" class="w-full px-3 py-2.5 bg-gray-900 text-white rounded outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Criar Canal</h2><button id="close-create-channel-modal" class="text-[#94a3b8] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <div id="create-channel-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl mb-4 text-sm"></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Nome do Canal</label><input id="channel-name-input" type="text" maxlength="30" placeholder="Ex: musicas" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]" /></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-[#94a3b8] uppercase tracking-wide mb-2">Tipo</label>
+          <select id="channel-type-input" class="w-full px-3 py-2.5 bg-[rgba(15,25,40,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-sm border border-[rgba(255,255,255,0.06)]">
             <option value="text">Texto</option><option value="voice">Voz</option>
           </select>
         </div>
-        <button id="create-channel-btn" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded transition-colors">Criar Canal</button>
+        <button id="create-channel-btn" class="w-full py-2.5 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5" style="background:linear-gradient(135deg,#3b82f6,#6366f1);box-shadow:0 4px 12px rgba(108,99,255,0.3);">Criar Canal</button>
       </div>
     </div>
   </div>
