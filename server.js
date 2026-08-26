@@ -12,6 +12,17 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const { initDatabase, query, queryOne, run, runReturningId } = require('./database');
 
+const logFile = path.join(__dirname, 'startup.log');
+function logToFile(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}\n`;
+  fs.appendFileSync(logFile, line);
+  console.log(msg);
+}
+process.on('uncaughtException', (err) => { logToFile('UNCAUGHT: ' + err.stack); process.exit(1); });
+process.on('unhandledRejection', (err) => { logToFile('UNHANDLED: ' + (err.stack || err)); process.exit(1); });
+
+logToFile('Process started, NODE_ENV=' + process.env.NODE_ENV + ', DATABASE_URL=' + (process.env.DATABASE_URL ? 'set' : 'NOT SET'));
+
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { maxHttpBufferSize: 10e6 });
@@ -1008,14 +1019,22 @@ io.on('connection', (socket) => {
 // ─── Start ───────────────────────────────────────────────────────────────────
 
 async function start() {
-  await initDatabase();
+  try {
+    logToFile('Iniciando banco de dados...');
+    await initDatabase();
+    logToFile('Banco de dados inicializado com sucesso');
+  } catch (err) {
+    logToFile('Erro ao inicializar banco: ' + err.message);
+    logToFile(err.stack);
+    process.exit(1);
+  }
 
   // Cleanup expired refresh tokens periodically
   setInterval(async () => {
     try {
       await run("DELETE FROM refresh_tokens WHERE expires_at < NOW()::text");
     } catch (err) {
-      console.error('Erro na limpeza de tokens:', err);
+      console.error('Erro na limpeza de tokens:', err.message);
     }
   }, 60 * 60 * 1000);
 
@@ -1037,4 +1056,8 @@ async function start() {
   });
 }
 
-start();
+start().catch(err => {
+  logToFile('FATAL: ' + err.message);
+  logToFile(err.stack);
+  process.exit(1);
+});
