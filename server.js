@@ -78,9 +78,10 @@ app.use('/uploads', express.static(uploadsDir));
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0, etag: false, lastModified: false }));
 
 let dbReady = false;
+let dbError = null;
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', dbReady, uptime: process.uptime() });
+  res.json({ status: 'ok', dbReady, dbError: dbError ? dbError.message : null, uptime: process.uptime() });
 });
 
 // ─── File Upload ─────────────────────────────────────────────────────────────
@@ -1033,6 +1034,7 @@ async function start() {
   } catch (err) {
     logToFile('Erro ao inicializar banco: ' + err.message);
     logToFile(err.stack);
+    dbError = err;
   }
 
   // Cleanup expired refresh tokens periodically
