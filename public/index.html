@@ -2080,12 +2080,7 @@
             <div id="voice-users-${ch.id}" class="ml-7 mt-0.5 space-y-0.5"></div>`;
           d.querySelector('.voice-channel-header').addEventListener('click', (e) => {
             e.stopPropagation();
-            if (currentVoiceChannelId === ch.id) {
-              if (isScreenSharing) stopScreenShare();
-              if (isCameraOn) toggleCamera();
-              socket.emit('leave-voice');
-              cleanupVoice();
-            } else {
+            if (currentVoiceChannelId !== ch.id) {
               joinVoiceChannel(ch);
             }
           });
