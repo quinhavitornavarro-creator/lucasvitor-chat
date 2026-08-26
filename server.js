@@ -77,6 +77,12 @@ app.use('/uploads', express.static(uploadsDir));
 
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: 0, etag: false, lastModified: false }));
 
+let dbReady = false;
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', dbReady, uptime: process.uptime() });
+});
+
 // ─── File Upload ─────────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
@@ -1023,6 +1029,7 @@ async function start() {
     logToFile('Iniciando banco de dados...');
     await initDatabase();
     logToFile('Banco de dados inicializado com sucesso');
+    dbReady = true;
   } catch (err) {
     logToFile('Erro ao inicializar banco: ' + err.message);
     logToFile(err.stack);
