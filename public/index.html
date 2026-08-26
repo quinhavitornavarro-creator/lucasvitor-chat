@@ -1991,7 +1991,9 @@
       online.forEach(m => {
         const d = document.createElement('div');
         d.className = 'member-item';
+        d.style.cssText = 'position:relative;';
         const roleBadge = m.role && m.role !== 'member' ? `<span style="color:${roleColors[m.role] || '#80848e'};font-size:10px;margin-left:4px;font-weight:600;">${roleLabels[m.role] || ''}</span>` : '';
+        const statusLabels = { online: 'Online', idle: 'Ausente', dnd: 'Nao perturbe', offline: 'Offline' };
         d.innerHTML = `
           <div class="member-avatar mr-2">
             <img src="${getAvatarUrl(m.avatar_seed)}" class="w-8 h-8 rounded-full" alt="" />
@@ -2001,6 +2003,13 @@
             <span class="text-sm font-medium text-[#e2e8f0] truncate block">${escapeHtml(m.nickname || m.username)}</span>
           </div>
           ${roleBadge}`;
+        const tip = document.createElement('div');
+        tip.className = 'member-tooltip hidden absolute right-full mr-2 top-0 z-50 p-3 rounded-lg pointer-events-none';
+        tip.style.cssText = 'background:rgba(8,12,23,0.95);border:1px solid rgba(108,140,255,0.2);backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,0,0,0.5);min-width:180px;';
+        tip.innerHTML = `<div class="flex items-center gap-2 mb-2"><img src="${getAvatarUrl(m.avatar_seed)}" class="w-8 h-8 rounded-full border-2 border-[rgba(108,140,255,0.3)]" alt="" /><div><div class="text-white font-semibold text-sm">${escapeHtml(m.nickname || m.username)}</div>${roleBadge ? `<div class="text-[10px] mt-0.5">${roleBadge}</div>` : ''}</div></div><div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full inline-block" style="background:${m.status === 'online' ? '#2dd4a0' : m.status === 'idle' ? '#f0b232' : m.status === 'dnd' ? '#f87171' : '#5a6070'}"></span><span class="text-[#8892a8] text-xs">${statusLabels[m.status] || 'Online'}</span></div>`;
+        d.appendChild(tip);
+        d.addEventListener('mouseenter', () => { d.style.background = 'rgba(108,140,255,0.08)'; tip.classList.remove('hidden'); });
+        d.addEventListener('mouseleave', () => { d.style.background = ''; tip.classList.add('hidden'); });
         onlineList.appendChild(d);
       });
 
@@ -2057,12 +2066,13 @@
         voiceChannels.forEach(ch => {
           const d = document.createElement('div'); d.className = 'channel-item flex flex-col px-2 py-1.5 rounded cursor-pointer'; d.setAttribute('data-channel-id', ch.id);
           d.innerHTML = `
-            <div class="flex items-center">
+            <div class="voice-channel-header flex items-center">
               <svg class="w-5 h-5 text-[#80848e] mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
               <span class="text-[#949ba4] text-sm font-medium">${escapeHtml(ch.name)}</span>
             </div>
             <div id="voice-users-${ch.id}" class="ml-7 mt-0.5 space-y-0.5"></div>`;
-          d.addEventListener('click', () => {
+          d.querySelector('.voice-channel-header').addEventListener('click', (e) => {
+            e.stopPropagation();
             if (currentVoiceChannelId === ch.id) {
               if (isScreenSharing) stopScreenShare();
               if (isCameraOn) toggleCamera();
@@ -2577,9 +2587,19 @@
       voiceGridContainer.classList.remove('hidden');
       const card = document.createElement('div');
       card.id = `participant-${socketId}`;
-      card.className = 'voice-card flex flex-col items-center justify-center bg-[rgba(255,255,255,0.06)] rounded-xl p-4 border-2 border-[rgba(255,255,255,0.06)] min-h-[140px]';
+      card.className = 'voice-card flex flex-col items-center justify-center rounded-xl p-4 min-h-[140px] cursor-pointer relative';
+      card.style.background = 'rgba(255,255,255,0.04)';
+      card.style.border = '1px solid rgba(108,140,255,0.1)';
       const label = isLocal ? ' <span class="text-xs text-green-400 font-medium">(Voce)</span>' : '';
       card.innerHTML = `<img src="${getAvatarUrl(avatarSeed)}" class="w-16 h-16 rounded-full mb-2 border-2 border-[rgba(255,255,255,0.06)]" alt="" /><span class="text-white text-sm font-medium text-center truncate w-full">${escapeHtml(username)}${label}</span><div class="mute-indicator mt-1 hidden"><svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg></div>`;
+      const tooltip = document.createElement('div');
+      tooltip.className = 'voice-tooltip hidden absolute -top-16 left-1/2 -translate-x-1/2 z-50 px-3 py-2 rounded-lg text-xs pointer-events-none';
+      tooltip.style.cssText = 'background:rgba(8,12,23,0.95);border:1px solid rgba(108,140,255,0.2);backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,0,0,0.5);white-space:nowrap;';
+      const statusText = isLocal ? 'Conectado (Voce)' : 'Conectado';
+      tooltip.innerHTML = `<div class="flex items-center gap-2 mb-1"><img src="${getAvatarUrl(avatarSeed)}" class="w-6 h-6 rounded-full border border-[rgba(108,140,255,0.3)]" alt="" /><span class="text-white font-semibold">${escapeHtml(username)}</span></div><div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span><span class="text-[#8892a8]">${statusText}</span></div>`;
+      card.appendChild(tooltip);
+      card.addEventListener('mouseenter', () => tooltip.classList.remove('hidden'));
+      card.addEventListener('mouseleave', () => tooltip.classList.add('hidden'));
       voiceParticipantsGrid.appendChild(card);
     }
 
@@ -2623,11 +2643,19 @@
       voiceUsersListEl.innerHTML = '';
       users.forEach(u => {
         const d = document.createElement('div');
-        d.className = 'voice-user-item flex items-center py-0.5 px-1 rounded';
+        d.className = 'voice-user-item flex items-center py-0.5 px-1 rounded cursor-pointer transition-colors';
         d.id = `voice-user-${u.socketId}`;
+        d.style.cssText = 'position:relative;';
         const muteIcon = u.isMuted ? '<svg class="w-3 h-3 text-red-400 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>' : '';
         const screenIcon = u.isScreenSharing ? '<span class="live-badge ml-1">AO VIVO</span>' : '';
         d.innerHTML = `<img src="${getAvatarUrl(u.avatarSeed)}" class="w-5 h-5 rounded-full mr-1.5 flex-shrink-0" alt="" /><span class="text-xs text-[#f2f3f5] truncate flex-1">${escapeHtml(u.username)}</span>${screenIcon}${muteIcon}`;
+        const tip = document.createElement('div');
+        tip.className = 'voice-user-tooltip hidden absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 px-3 py-2 rounded-lg text-xs pointer-events-none';
+        tip.style.cssText = 'background:rgba(8,12,23,0.95);border:1px solid rgba(108,140,255,0.2);backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,0,0,0.5);white-space:nowrap;min-width:120px;';
+        tip.innerHTML = `<div class="flex items-center gap-2 mb-1"><img src="${getAvatarUrl(u.avatarSeed)}" class="w-6 h-6 rounded-full border border-[rgba(108,140,255,0.3)]" alt="" /><span class="text-white font-semibold">${escapeHtml(u.username)}</span></div><div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span><span class="text-[#8892a8]">Conectado</span></div>`;
+        d.appendChild(tip);
+        d.addEventListener('mouseenter', () => { d.style.background = 'rgba(108,140,255,0.08)'; tip.classList.remove('hidden'); });
+        d.addEventListener('mouseleave', () => { d.style.background = ''; tip.classList.add('hidden'); });
         voiceUsersListEl.appendChild(d);
       });
     }
@@ -2638,10 +2666,18 @@
       c.innerHTML = '';
       users.forEach(u => {
         const d = document.createElement('div');
-        d.className = 'flex items-center py-0.5';
+        d.className = 'flex items-center py-0.5 rounded px-1 transition-colors cursor-pointer';
+        d.style.cssText = 'position:relative;';
         const liveBadge = u.isScreenSharing ? '<span class="live-badge ml-1">AO VIVO</span>' : '';
         const muteIcon = u.isMuted ? '<svg class="w-3 h-3 text-red-400 ml-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>' : '';
         d.innerHTML = `<img src="${getAvatarUrl(u.avatarSeed)}" class="w-3.5 h-3.5 rounded-full mr-1" alt="" /><span class="text-[11px] text-[#949ba4] truncate">${escapeHtml(u.username)}</span>${liveBadge}${muteIcon}`;
+        const tip = document.createElement('div');
+        tip.className = 'voice-user-tooltip hidden absolute left-full ml-2 top-0 z-50 px-3 py-2 rounded-lg text-xs pointer-events-none';
+        tip.style.cssText = 'background:rgba(8,12,23,0.95);border:1px solid rgba(108,140,255,0.2);backdrop-filter:blur(12px);box-shadow:0 4px 20px rgba(0,0,0,0.5);white-space:nowrap;min-width:120px;';
+        tip.innerHTML = `<div class="flex items-center gap-2 mb-1"><img src="${getAvatarUrl(u.avatarSeed)}" class="w-6 h-6 rounded-full border border-[rgba(108,140,255,0.3)]" alt="" /><span class="text-white font-semibold">${escapeHtml(u.username)}</span></div><div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-400 inline-block"></span><span class="text-[#8892a8]">Conectado</span></div>`;
+        d.appendChild(tip);
+        d.addEventListener('mouseenter', () => { d.style.background = 'rgba(108,140,255,0.08)'; tip.classList.remove('hidden'); });
+        d.addEventListener('mouseleave', () => { d.style.background = ''; tip.classList.add('hidden'); });
         c.appendChild(d);
       });
     }
