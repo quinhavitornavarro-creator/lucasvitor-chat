@@ -1,7 +1,7 @@
 {
-  "name": "discord-clone",
-  "version": "6.0.0",
-  "description": "Discord Clone - Chat em tempo real com servidores, canais, voz WebRTC, reações, menções, moderação",
+  "name": "lucasvitor-chat",
+  "version": "7.0.0",
+  "description": "LucasVitor Chat - Chat em tempo real com servidores, canais, voz WebRTC, screen share, camera, emojis, avatars premium",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,8 +10,8 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "keywords": ["discord", "clone", "realtime", "chat", "socketio", "auth", "webrtc", "reactions", "mentions"],
-  "author": "",
+  "keywords": ["chat", "realtime", "socketio", "auth", "webrtc", "voice", "video", "screen-share"],
+  "author": "Lucas Vitor",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",
