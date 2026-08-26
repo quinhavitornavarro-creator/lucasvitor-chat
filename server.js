@@ -882,7 +882,7 @@ io.on('connection', (socket) => {
     voiceUsers.set(socket.id, {
       userId: user.id, username: user.username,
       avatarSeed: user.avatarSeed, channelId, serverId,
-      roomName, isMuted: false
+      roomName, isMuted: false, isScreenSharing: false
     });
 
     socket.to(roomName).emit('voice-user-joined', {
@@ -929,13 +929,17 @@ io.on('connection', (socket) => {
   socket.on('screen-share-started', () => {
     const vd = voiceUsers.get(socket.id);
     if (!vd) return;
+    vd.isScreenSharing = true;
     socket.to(vd.roomName).emit('screen-share-started', { socketId: socket.id, username: vd.username });
+    broadcastVoiceUsers(vd.channelId);
   });
 
   socket.on('screen-share-stopped', () => {
     const vd = voiceUsers.get(socket.id);
     if (!vd) return;
+    vd.isScreenSharing = false;
     socket.to(vd.roomName).emit('screen-share-stopped', { socketId: socket.id });
+    broadcastVoiceUsers(vd.channelId);
   });
 
   socket.on('camera-started', () => {
@@ -996,7 +1000,7 @@ io.on('connection', (socket) => {
         if (vd && vd.channelId === channelId) {
           users.push({
             socketId: sid, userId: vd.userId, username: vd.username,
-            avatarSeed: vd.avatarSeed, isMuted: vd.isMuted
+            avatarSeed: vd.avatarSeed, isMuted: vd.isMuted, isScreenSharing: vd.isScreenSharing
           });
         }
       }
