@@ -1,0 +1,7 @@
+node_modules
+npm-debug.log
+discord_clone.db
+.git
+.gitignore
+*.md
+data
