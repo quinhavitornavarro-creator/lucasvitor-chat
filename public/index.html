@@ -1957,19 +1957,26 @@
             videoTransceiver.direction = 'sendrecv';
             await videoTransceiver.sender.replaceTrack(vt);
           }
-          // Replace audio sender with screen audio (or stop mic audio if no screen audio)
+          // Replace audio sender with screen audio (or keep mic if no screen audio)
           const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
           if (audioSender) {
             if (screenAudioTracks.length > 0) {
               await audioSender.replaceTrack(screenAudioTracks[0]);
             } else {
-              // No screen audio, stop mic so remote doesn't hear local mic during screen share
-              await audioSender.replaceTrack(null);
+              // No screen audio, keep mic active so others still hear you
+              const micTrack = localStream ? localStream.getAudioTracks()[0] : null;
+              if (micTrack) await audioSender.replaceTrack(micTrack);
             }
           } else if (screenAudioTracks.length > 0) {
             // No audio sender yet, add screen audio track
             pc.addTrack(screenAudioTracks[0], screenShareStream);
           }
+          // Force renegotiation so remote peer receives the new video track
+          try {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            socket.emit('voice-offer', { targetSocketId: sid, offer });
+          } catch (e) {}
         }
         // Mute local playback to prevent echo
         const pipVideo = $('video-pip-video');
