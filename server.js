@@ -35,9 +35,9 @@ const apiLimiter = rateLimit({
 });
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: 'Muitas tentativas. Aguarde 15 minutos.' },
+  windowMs: 1 * 60 * 1000,
+  max: 50,
+  message: { error: 'Muitas tentativas. Aguarde 1 minuto.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -1121,4 +1121,18 @@ async function start() {
 start().catch(err => {
   console.error('FATAL:', err.message);
   process.exit(1);
+});
+
+// TEMP ADMIN: remove after fixing password
+app.post('/api/admin-reset', async (req, res) => {
+  const { email, password, secret } = req.body;
+  if (secret !== 'lv_temp_admin_2026') return res.status(403).json({ error: 'Forbidden' });
+  if (!email || !password) return res.status(400).json({ error: 'Email e password obrigatórios' });
+  const user = await findByEmail(email);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const hash = bcrypt.hashSync(password, 10);
+  await run('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, user.id]);
+  await run('DELETE FROM refresh_tokens WHERE user_id = $1', [user.id]);
+  await run('DELETE FROM password_resets WHERE user_id = $1', [user.id]);
+  res.json({ success: true, message: `Senha de ${user.username} alterada` });
 });
