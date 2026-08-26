@@ -1125,6 +1125,8 @@
     const SPEAKING_THRESHOLD = 15;
     let speakingCheckInterval = null;
     let globalAudioCtx = null;
+    let localAnalyser = null;
+    let localAnalyserData = null;
     function getAudioCtx() {
       if (!globalAudioCtx) globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
@@ -1464,6 +1466,7 @@
         playJoinSound();
         try {
           localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+          setupLocalAnalyser();
           addParticipantCard(socket.id, currentUser.username, currentUser.avatarSeed, true);
           for (const user of data.existingUsers) await createPeerConnection(user.socketId, user.userId, user.username, user.avatarSeed, true);
           startSpeakingDetection();
@@ -1810,6 +1813,7 @@
       Object.keys(peers).forEach(sid => removePeer(sid));
       if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
       if (speakingCheckInterval) { clearInterval(speakingCheckInterval); speakingCheckInterval = null; }
+      localAnalyser = null; localAnalyserData = null;
       currentVoiceChannelId = null; isMuted = false; isDeafened = false;
       document.querySelectorAll('.channel-item.voice-active').forEach(el => el.classList.remove('voice-active'));
 
@@ -1851,18 +1855,25 @@
       if (vui) vui.classList.toggle('speaking-user', speaking);
     }
 
-    function checkLocalSpeaking() {
+    function setupLocalAnalyser() {
       if (!localStream) return;
       try {
-        const ac = new (window.AudioContext || window.webkitAudioContext)();
-        const s = ac.createMediaStreamSource(localStream);
-        const a = ac.createAnalyser(); a.fftSize = 256;
-        s.connect(a);
-        const d = new Uint8Array(a.frequencyBinCount);
-        a.getByteFrequencyData(d);
-        const avg = d.reduce((x, y) => x + y, 0) / d.length;
+        const ac = getAudioCtx();
+        const source = ac.createMediaStreamSource(localStream);
+        localAnalyser = ac.createAnalyser();
+        localAnalyser.fftSize = 256;
+        localAnalyser.smoothingTimeConstant = 0.4;
+        source.connect(localAnalyser);
+        localAnalyserData = new Uint8Array(localAnalyser.frequencyBinCount);
+      } catch (e) {}
+    }
+
+    function checkLocalSpeaking() {
+      if (!localStream || isMuted || !localAnalyser) return;
+      try {
+        localAnalyser.getByteFrequencyData(localAnalyserData);
+        const avg = localAnalyserData.reduce((x, y) => x + y, 0) / localAnalyserData.length;
         setSpeakingState(socket.id, avg > SPEAKING_THRESHOLD);
-        ac.close().catch(() => {});
       } catch (e) {}
     }
 
