@@ -92,14 +92,31 @@
       border-radius: 50%;
       transition: all 0.3s cubic-bezier(.4,0,.2,1);
       backdrop-filter: blur(8px);
+      position: relative;
+    }
+    .server-icon::before {
+      content: '';
+      position: absolute; inset: -2px;
+      border-radius: inherit;
+      background: conic-gradient(from 0deg, rgba(108,140,255,0.3), rgba(92,224,216,0.2), rgba(108,140,255,0.3));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: -1;
+    }
+    .server-icon:hover::before {
+      opacity: 1;
     }
     .server-icon:hover {
       border-radius: 33%;
-      box-shadow: 0 0 16px var(--glow-blue);
+      transform: scale(1.08);
     }
     .server-icon.active {
       border-radius: 33%;
-      box-shadow: 0 0 20px var(--glow-blue);
+      transform: scale(1.05);
+    }
+    .server-icon.active::before {
+      opacity: 1;
+      background: conic-gradient(from 0deg, var(--accent-primary), var(--accent-secondary), var(--accent-primary));
     }
     .server-pill {
       transition: height 0.2s ease-out;
@@ -875,25 +892,25 @@
 
     <!-- Server Sidebar (icons) -->
     <div class="w-[72px] flex flex-col items-center py-3 gap-2 overflow-y-auto border-r border-[#1f2023]" id="server-sidebar" style="background:#1e1f22;">
-      <div id="mobile-menu-btn" class="server-icon w-12 h-12 bg-[#313338] hover:bg-[#5865f2] rounded-[50%] items-center justify-center cursor-pointer transition-all text-[#23a55a] hover:text-white mb-2 hidden" title="Menu">
+      <div id="mobile-menu-btn" class="server-icon w-12 h-12 rounded-[50%] items-center justify-center cursor-pointer transition-all mb-2 hidden" style="background:var(--bg-surface); border: 1px solid var(--glass-border); color: var(--accent-green);" title="Menu">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </div>
       <div class="relative">
         <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full server-pill h-0 transition-all" id="home-pill"></div>
-        <div id="home-server-btn" class="server-icon w-12 h-12 rounded-[50%] flex items-center justify-center cursor-pointer transition-all" style="background:#5865f2;" title="Mensagens Diretas">
+        <div id="home-server-btn" class="server-icon w-12 h-12 rounded-[50%] flex items-center justify-center cursor-pointer transition-all" style="background:linear-gradient(135deg, #6c8cff, #5070dd); box-shadow: 0 0 16px rgba(108,140,255,0.5), inset 0 1px 0 rgba(255,255,255,0.15);" title="Mensagens Diretas">
           <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="Arial Black, sans-serif" font-weight="900" font-size="9" letter-spacing="-0.5">LV</text></svg>
         </div>
       </div>
-      <div class="w-8 h-0.5 bg-[#3f4147] rounded-full my-1"></div>
+      <div class="w-8 h-0.5 rounded-full my-1" style="background: linear-gradient(90deg, transparent, var(--border-glass), transparent);"></div>
       <div id="server-list" class="flex flex-col gap-2 items-center"></div>
-      <div class="w-8 h-0.5 bg-[#3f4147] rounded-full my-1"></div>
+      <div class="w-8 h-0.5 rounded-full my-1" style="background: linear-gradient(90deg, transparent, var(--border-glass), transparent);"></div>
       <div class="relative">
-        <div id="add-server-btn" class="server-icon w-12 h-12 bg-[#313338] hover:bg-[#23a55a] rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-[#23a55a] hover:text-white" title="Criar Servidor">
+        <div id="add-server-btn" class="server-icon w-12 h-12 rounded-[50%] flex items-center justify-center cursor-pointer transition-all" style="background:var(--bg-surface); border: 1px dashed rgba(45,212,160,0.4); color: var(--accent-green);" title="Criar Servidor">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </div>
       </div>
       <div class="relative">
-        <div id="join-server-sidebar-btn" class="server-icon w-12 h-12 bg-[#313338] hover:bg-[#23a55a] rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-[#23a55a] hover:text-white" title="Entrar com Codigo">
+        <div id="join-server-sidebar-btn" class="server-icon w-12 h-12 rounded-[50%] flex items-center justify-center cursor-pointer transition-all" style="background:var(--bg-surface); border: 1px dashed rgba(108,140,255,0.4); color: var(--accent-primary);" title="Entrar com Codigo">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
       </div>
@@ -1910,12 +1927,13 @@
 
     function renderServerList() {
       serverList.innerHTML = '';
-      const colors = ['#ed4245', '#3b82f6', '#23a55a', '#f0b232', '#a855f7', '#ec4899', '#5865f2'];
+      const colors = ['#7c3aed', '#3b82f6', '#2dd4a0', '#f59e0b', '#ec4899', '#f87171', '#6c8cff'];
+      const glows = ['rgba(124,58,237,0.5)', 'rgba(59,130,246,0.5)', 'rgba(45,212,160,0.5)', 'rgba(245,158,11,0.5)', 'rgba(236,72,153,0.5)', 'rgba(248,113,113,0.5)', 'rgba(108,140,255,0.5)'];
       userServers.forEach(s => {
         const ci = s.name.charCodeAt(0) % colors.length;
         const initials = s.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
         const w = document.createElement('div'); w.className = 'relative flex flex-col items-center';
-        w.innerHTML = `<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full server-pill transition-all server-pill-${s.id}" style="height:0"></div><div class="server-icon w-12 h-12 rounded-[50%] flex items-center justify-center cursor-pointer text-white font-bold text-sm transition-all" data-server-id="${s.id}" title="${escapeHtml(s.name)}" style="background:${colors[ci]}">${initials}</div><div class="server-name-label mt-0.5">${escapeHtml(s.name)}</div>`;
+        w.innerHTML = `<div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full server-pill transition-all server-pill-${s.id}" style="height:0"></div><div class="server-icon w-12 h-12 rounded-[50%] flex items-center justify-center cursor-pointer text-white font-bold text-sm transition-all" data-server-id="${s.id}" title="${escapeHtml(s.name)}" style="background:${colors[ci]}; box-shadow: 0 0 12px ${glows[ci]}, inset 0 1px 0 rgba(255,255,255,0.15)">${initials}</div><div class="server-name-label mt-0.5">${escapeHtml(s.name)}</div>`;
         serverList.appendChild(w);
         w.querySelector('.server-icon').addEventListener('click', () => selectServer(s));
       });
