@@ -1469,6 +1469,44 @@
       { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
     ] };
 
+    // ═══ WEBRTC QUALITY HELPERS ════════════════════════════════════════════════
+    function getOptimalVideoConfig(peerCount) {
+      if (peerCount === 0) return { width: 1280, height: 720, frameRate: 30, maxBitrate: 2500000 };
+      if (peerCount <= 2) return { width: 1280, height: 720, frameRate: 30, maxBitrate: 2000000 };
+      if (peerCount <= 5) return { width: 960, height: 540, frameRate: 24, maxBitrate: 1500000 };
+      return { width: 640, height: 360, frameRate: 20, maxBitrate: 800000 };
+    }
+
+    async function applySenderBitrate(pc, maxBitrate) {
+      const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (!videoSender) return;
+      try {
+        const params = videoSender.getParameters();
+        if (!params.encodings || params.encodings.length === 0) {
+          params.encodings = [{ maxBitrate }];
+        } else {
+          params.encodings[0].maxBitrate = maxBitrate;
+        }
+        await videoSender.setParameters(params);
+      } catch (e) {}
+    }
+
+    async function renegotiateWithQuality(pc, targetSocketId) {
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        socket.emit('voice-offer', { targetSocketId, offer });
+      } catch (e) {}
+    }
+
+    async function applyQualityToAllPeers() {
+      const peerCount = Object.keys(peers).length;
+      const config = getOptimalVideoConfig(peerCount);
+      for (const sid in peers) {
+        await applySenderBitrate(peers[sid].pc, config.maxBitrate);
+      }
+    }
+
     // ═══ DOM REFS ════════════════════════════════════════════════════════════
     const $ = id => document.getElementById(id);
     const authScreen = $('auth-screen'), chatScreen = $('chat-screen');
@@ -1868,9 +1906,10 @@
 
       socket.on('voice-user-joined', async (data) => {
         await createPeerConnection(data.socketId, data.userId, data.username, data.avatarSeed, false);
+        await applyQualityToAllPeers();
       });
 
-      socket.on('voice-user-left', (data) => removePeer(data.socketId));
+      socket.on('voice-user-left', async (data) => { removePeer(data.socketId); await applyQualityToAllPeers(); });
 
       socket.on('voice-offer', async (data) => {
         const { offer, fromSocketId, fromUser } = data;
@@ -2197,6 +2236,7 @@
     function cleanupVoice() {
       if (currentVoiceChannelId !== null) playLeaveSound();
       if (isScreenSharing) stopScreenShare();
+      stopScreenQualityMonitor();
       if (isCameraOn) toggleCamera();
       Object.keys(peers).forEach(sid => removePeer(sid));
       if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
@@ -2351,63 +2391,107 @@
     }
 
     // ═══ SCREEN SHARE ════════════════════════════════════════════════════════
+    let screenQualityMonitor = null;
+
+    function startScreenQualityMonitor() {
+      stopScreenQualityMonitor();
+      screenQualityMonitor = setInterval(async () => {
+        if (!isScreenSharing || !screenShareStream) return;
+        const peerCount = Object.keys(peers).length;
+        const config = getOptimalVideoConfig(peerCount);
+        for (const sid in peers) {
+          const pc = peers[sid].pc;
+          const videoSender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (!videoSender) continue;
+          try {
+            const stats = await videoSender.getStats();
+            const outbound = [...stats.values()].find(s => s.type === 'outbound-rtp' && s.kind === 'video');
+            if (outbound && outbound.framesEncoded > 0) {
+              const fps = outbound.framesPerSecond || 0;
+              const bitrate = (outbound.bytesSent * 8) / ((stats.timestamp - (outbound._lastTimestamp || stats.timestamp)) / 1000 || 1);
+              outbound._lastTimestamp = stats.timestamp;
+              outbound._lastBytes = outbound.bytesSent;
+              if (bitrate > config.maxBitrate * 1.3 || fps < config.frameRate * 0.5) {
+                await applySenderBitrate(pc, Math.max(config.maxBitrate * 0.7, 300000));
+              }
+            }
+          } catch (e) {}
+        }
+      }, 3000);
+    }
+
+    function stopScreenQualityMonitor() {
+      if (screenQualityMonitor) { clearInterval(screenQualityMonitor); screenQualityMonitor = null; }
+    }
+
     async function startScreenShare() {
       if (isCameraOn) await toggleCamera();
       try {
-        screenShareStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: { ideal: 30, max: 60 }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true });
+        const peerCount = Object.keys(peers).length;
+        const qConfig = getOptimalVideoConfig(peerCount);
+        screenShareStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            frameRate: { ideal: qConfig.frameRate, max: Math.min(qConfig.frameRate + 10, 60) },
+            width: { ideal: qConfig.width, max: 1920 },
+            height: { ideal: qConfig.height, max: 1080 },
+            cursor: 'always',
+            displaySurface: 'monitor'
+          },
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+        });
         isScreenSharing = true;
         const vt = screenShareStream.getVideoTracks()[0];
         const screenAudioTracks = screenShareStream.getAudioTracks();
+
+        // Apply constraints to the track for better performance
+        try {
+          const settings = vt.getSettings();
+          console.log(`[ScreenShare] Resolução: ${settings.width}x${settings.height}, FPS: ${settings.frameRate}`);
+        } catch (e) {}
+
         $('screen-icon').classList.add('hidden'); $('screen-btn-text').textContent = 'Parar';
         $('screen-share-btn').classList.add('bg-green-700'); $('screen-share-btn').classList.remove('bg-gray-700');
-        // Show in floating PiP (Discord style: chat full, video small bottom-right)
         showVideoPip(screenShareStream, 'Sua tela');
-        // If screen share has system audio, mute remote audio locally to prevent echo loop
+
         if (screenAudioTracks.length > 0) {
           for (const sid in peers) {
             if (peers[sid].audioEl) peers[sid].audioEl.muted = true;
           }
         }
-        // For each peer: replace video track + add/replace screen audio
+
         for (const sid in peers) {
           const pc = peers[sid].pc;
-          // Replace video transceiver
           const videoTransceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
           if (videoTransceiver) {
             videoTransceiver.direction = 'sendrecv';
             await videoTransceiver.sender.replaceTrack(vt);
           }
-          // Replace audio sender with screen audio (or keep mic if no screen audio)
           const audioSender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
           if (audioSender) {
             if (screenAudioTracks.length > 0) {
               await audioSender.replaceTrack(screenAudioTracks[0]);
             } else {
-              // No screen audio, keep mic active so others still hear you
               const micTrack = localStream ? localStream.getAudioTracks()[0] : null;
               if (micTrack) await audioSender.replaceTrack(micTrack);
             }
           } else if (screenAudioTracks.length > 0) {
-            // No audio sender yet, add screen audio track
             pc.addTrack(screenAudioTracks[0], screenShareStream);
           }
-          // Force renegotiation so remote peer receives the new video track
-          try {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit('voice-offer', { targetSocketId: sid, offer });
-          } catch (e) {}
+          await applySenderBitrate(pc, qConfig.maxBitrate);
+          await renegotiateWithQuality(pc, sid);
         }
-        // Mute local playback to prevent echo
+
         const pipVideo = $('video-pip-video');
         pipVideo.muted = true;
         vt.onended = () => stopScreenShare();
         if (socket) socket.emit('screen-share-started');
         playScreenShareStartSound();
+        startScreenQualityMonitor();
       } catch (err) { console.error('Erro ao compartilhar tela:', err); isScreenSharing = false; }
     }
 
     async function stopScreenShare() {
+      stopScreenQualityMonitor();
       if (screenShareStream) { screenShareStream.getTracks().forEach(t => t.stop()); screenShareStream = null; }
       isScreenSharing = false;
       $('screen-icon').classList.remove('hidden'); $('screen-btn-text').textContent = 'Tela';
@@ -2467,7 +2551,12 @@
       } else {
         if (isScreenSharing) await stopScreenShare();
         try {
-          cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+          const peerCount = Object.keys(peers).length;
+          const qConfig = getOptimalVideoConfig(peerCount);
+          cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: Math.min(qConfig.width, 640) }, height: { ideal: Math.min(qConfig.height, 480) }, frameRate: { ideal: Math.min(qConfig.frameRate, 24) } },
+            audio: false
+          });
           isCameraOn = true;
           const vt = cameraStream.getVideoTracks()[0];
           $('cam-on-icon').classList.add('hidden'); $('cam-off-icon').classList.remove('hidden');
@@ -2477,6 +2566,7 @@
             const pc = peers[sid].pc;
             const transceiver = pc.getTransceivers().find(t => t.receiver.track.kind === 'video');
             if (transceiver) { transceiver.direction = 'sendrecv'; await transceiver.sender.replaceTrack(vt); }
+            await applySenderBitrate(pc, Math.min(qConfig.maxBitrate, 800000));
           }
           vt.onended = () => { if (isCameraOn) toggleCamera(); };
           if (socket) socket.emit('camera-started');
