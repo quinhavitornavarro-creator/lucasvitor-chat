@@ -1136,7 +1136,9 @@
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' }
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
     ] };
 
     // ═══ DOM REFS ════════════════════════════════════════════════════════════
@@ -1768,9 +1770,14 @@
       };
 
       pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        console.log(`[WebRTC] ${username} connection: ${pc.connectionState}`);
+        if (pc.connectionState === 'failed') {
           removePeer(socketId);
         }
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        console.log(`[WebRTC] ${username} ICE: ${pc.iceConnectionState}`);
       };
 
       peers[socketId] = { pc, username, avatarSeed, userId, audioEl, analyser: null, audioCtx: null, hasCamera: false, isScreenSharing: false };
