@@ -272,8 +272,16 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ error: 'Email e senha são obrigatórios' });
+    console.log('[LOGIN] Tentativa para email:', email);
     const user = await findByEmail(email);
-    if (!user || !bcrypt.compareSync(password, user.password_hash))
+    if (!user) {
+      console.log('[LOGIN] Usuário não encontrado para email:', email);
+      return res.status(401).json({ error: 'Email ou senha inválidos' });
+    }
+    console.log('[LOGIN] Usuário encontrado (id:', user.id, 'username:', user.username, ')');
+    const passwordMatch = bcrypt.compareSync(password, user.password_hash);
+    console.log('[LOGIN] Senha confere:', passwordMatch);
+    if (!passwordMatch)
       return res.status(401).json({ error: 'Email ou senha inválidos' });
 
     const accessToken = generateAccessToken(user.id);
