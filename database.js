@@ -42,12 +42,13 @@ async function initDatabase() {
       name TEXT NOT NULL,
       icon_url TEXT DEFAULT '',
       invite_code TEXT NOT NULL UNIQUE,
-      owner_id INTEGER NOT NULL,
+      owner_id INTEGER,
       description TEXT DEFAULT '',
       created_at TEXT DEFAULT NOW(),
-      FOREIGN KEY (owner_id) REFERENCES users(id)
+      FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL
     );
   `);
+  await pool.query(`ALTER TABLE servers ALTER COLUMN owner_id DROP NOT NULL`).catch(() => {});
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS channels (
@@ -153,7 +154,7 @@ async function initDatabase() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     let inviteCode = '';
     for (let i = 0; i < 8; i++) inviteCode += chars.charAt(Math.floor(Math.random() * chars.length));
-    const result = await pool.query('INSERT INTO servers (name, invite_code, owner_id) VALUES ($1, $2, 0) RETURNING id', ['Comunidade Geral', inviteCode]);
+    const result = await pool.query('INSERT INTO servers (name, invite_code, owner_id) VALUES ($1, $2, NULL) RETURNING id', ['Comunidade Geral', inviteCode]);
     const serverId = result.rows[0].id;
     await pool.query('INSERT INTO channels (server_id, name, type, position) VALUES ($1, $2, $3, $4)', [serverId, 'geral', 'text', 0]);
     await pool.query('INSERT INTO channels (server_id, name, type, position) VALUES ($1, $2, $3, $4)', [serverId, 'ajuda', 'text', 1]);
