@@ -11,39 +11,39 @@
   <script src="/socket.io/socket.io.js"></script>
   <style>
     :root {
-      --bg-deepest: #0a1628;
-      --bg-deep: #0d1f2d;
-      --bg-panel: #0d1f2d;
-      --bg-surface: rgba(13,31,45,0.6);
-      --bg-elevated: rgba(17,34,51,0.7);
-      --bg-hover: rgba(255,255,255,0.04);
-      --border-glass: rgba(255,255,255,0.06);
-      --border-glass-hover: rgba(255,255,255,0.12);
-      --accent-primary: #00d4aa;
-      --accent-secondary: #0ea5e9;
-      --accent-green: #22c55e;
-      --accent-red: #ef4444;
-      --neon-green: #00d4aa;
-      --neon-green-glow: rgba(0,212,170,0.4);
-      --text-primary: #e2e8f0;
-      --text-secondary: #7b8fa3;
-      --text-muted: #4a6274;
+      --bg-deepest: #1e1f22;
+      --bg-deep: #2b2d31;
+      --bg-panel: #2b2d31;
+      --bg-surface: #383a40;
+      --bg-elevated: #404249;
+      --bg-hover: #35373c;
+      --border-glass: #3f4147;
+      --border-glass-hover: #4e5058;
+      --accent-primary: #5865f2;
+      --accent-secondary: #5865f2;
+      --accent-green: #23a55a;
+      --accent-red: #ed4245;
+      --neon-green: #23a55a;
+      --neon-green-glow: rgba(35,165,90,0.4);
+      --text-primary: #f2f3f5;
+      --text-secondary: #949ba4;
+      --text-muted: #5c5e66;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(135deg, #0a1628 0%, #0d1f2d 40%, #112233 100%);
+      font-family: 'gg sans', 'Noto Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      background: #313338;
       overflow: hidden;
       color: var(--text-primary);
     }
 
     /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar { width: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
+    ::-webkit-scrollbar-thumb { background: #1a1b1e; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #27282d; }
 
     /* Server Icons */
     .server-icon {
@@ -51,13 +51,10 @@
       transition: all 0.3s cubic-bezier(.4,0,.2,1);
     }
     .server-icon:hover {
-      border-radius: 35%;
-      transform: scale(1.08);
-      box-shadow: 0 0 16px rgba(0,212,170,0.35);
+      border-radius: 33%;
     }
     .server-icon.active {
-      border-radius: 35%;
-      box-shadow: 0 0 16px rgba(0,212,170,0.4);
+      border-radius: 33%;
     }
     .server-pill {
       transition: height 0.2s ease-out;
@@ -76,18 +73,16 @@
 
     /* Channel Sidebar */
     #channel-sidebar {
-      background: rgba(13,31,45,0.85);
-      border-right: 1px solid var(--border-glass);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: #2b2d31;
+      border-right: 1px solid #1f2023;
     }
 
     .channel-category {
       display: flex;
       align-items: center;
       gap: 4px;
-      padding: 6px 8px;
-      margin-top: 12px;
+      padding: 16px 8px 4px 2px;
+      margin-top: 0;
       margin-bottom: 2px;
       cursor: pointer;
       user-select: none;
@@ -107,37 +102,31 @@
     }
 
     .channel-item {
-      border-left: 2px solid transparent;
-      transition: all 0.2s ease;
-      border-radius: 10px;
+      transition: all 0.1s ease;
+      border-radius: 4px;
       padding: 6px 8px;
+      margin: 1px 8px;
     }
     .channel-item:hover {
-      background-color: rgba(255,255,255,0.05) !important;
-      padding-left: 14px;
+      background-color: #35373c !important;
     }
     .channel-item.active {
-      border-left-color: var(--accent-primary);
-      background-color: rgba(0,212,170,0.1) !important;
-      border-radius: 10px;
+      background-color: #404249 !important;
+      color: #fff !important;
     }
     .channel-item.voice-active {
-      background-color: rgba(0,212,170,0.1) !important;
-      border-left-color: var(--accent-primary) !important;
-    }
-    .channel-item.voice-active span {
-      color: var(--accent-primary) !important;
+      background-color: #404249 !important;
     }
 
     /* Messages */
     .message {
-      transition: background-color 0.15s ease;
-      border-radius: 10px;
-      margin: 1px 0;
-      padding: 2px 8px;
+      transition: background-color 0.1s ease;
+      margin: 0;
+      padding: 2px 48px 2px 72px;
+      position: relative;
     }
     .message:hover {
-      background-color: rgba(255,255,255,0.02);
+      background-color: #2e3035;
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(8px); }
@@ -153,9 +142,7 @@
 
     /* Modals */
     .modal-backdrop {
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(0,0,0,0.7);
     }
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
@@ -167,45 +154,43 @@
     /* Voice Cards */
     .voice-card {
       transition: all 0.2s ease;
-      border: 1px solid var(--border-glass);
-      background: var(--bg-surface);
-      backdrop-filter: blur(12px);
-      border-radius: 16px;
+      border: 1px solid #3f4147;
+      background: #2b2d31;
+      border-radius: 8px;
     }
     .voice-card:hover {
-      border-color: var(--border-glass-hover);
-      background: var(--bg-elevated);
+      border-color: #4e5058;
+      background: #2e3035;
     }
     .voice-card.speaking {
-      border-color: var(--neon-green) !important;
-      background: rgba(0,212,170,0.06) !important;
-      box-shadow: 0 0 0 2px rgba(0,212,170,0.2), 0 0 24px var(--neon-green-glow), 0 0 48px rgba(0,212,170,0.12);
+      border-color: #23a55a !important;
+      background: rgba(35,165,90,0.06) !important;
     }
     .voice-card.speaking img {
-      box-shadow: 0 0 0 3px var(--neon-green), 0 0 20px var(--neon-green-glow);
+      box-shadow: 0 0 0 3px #23a55a;
     }
     @keyframes speakPulse {
-      0%, 100% { box-shadow: 0 0 0 3px var(--neon-green), 0 0 12px var(--neon-green-glow); }
-      50% { box-shadow: 0 0 0 5px rgba(0,212,170,0.3), 0 0 25px rgba(0,212,170,0.3); }
+      0%, 100% { box-shadow: 0 0 0 3px #23a55a; }
+      50% { box-shadow: 0 0 0 5px rgba(35,165,90,0.3); }
     }
     .voice-card.speaking img { animation: speakPulse 1.5s ease-in-out infinite; }
 
     /* Voice user items */
-    .voice-user-item { transition: background-color 0.15s ease; }
-    .voice-user-item.speaking-user { background-color: rgba(0,212,170,0.12) !important; }
-    .voice-user-item.speaking-user span { color: var(--neon-green) !important; }
+    .voice-user-item { transition: background-color 0.1s ease; }
+    .voice-user-item.speaking-user { background-color: rgba(35,165,90,0.12) !important; }
+    .voice-user-item.speaking-user span { color: #23a55a !important; }
 
     /* Live badge */
     .live-badge {
       display: inline-flex; align-items: center; gap: 3px;
-      background: var(--accent-red); color: #fff; font-size: 9px; font-weight: 700;
+      background: #ed4245; color: #fff; font-size: 9px; font-weight: 700;
       padding: 1px 6px; border-radius: 9999px; letter-spacing: 0.5px;
       animation: livePulse 1.5s ease-in-out infinite;
       text-transform: uppercase;
     }
     @keyframes livePulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
-      50% { opacity: 0.6; box-shadow: 0 0 12px rgba(239,68,68,0.8); }
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
     }
     .live-badge::before {
       content: ''; width: 5px; height: 5px; background: #fff; border-radius: 50%;
@@ -213,65 +198,62 @@
 
     /* Members Panel */
     #members-panel {
-      width: 260px;
-      background: rgba(13,31,45,0.85);
-      border-left: 1px solid var(--border-glass);
+      width: 240px;
+      background: #2b2d31;
+      border-left: 1px solid #1f2023;
       overflow-y: auto;
       flex-shrink: 0;
       transition: width 0.3s ease, opacity 0.3s ease;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
     }
     #members-panel.collapsed { width: 0; overflow: hidden; opacity: 0; }
     .member-item {
-      display: flex; align-items: center; padding: 6px 8px;
-      border-radius: 10px; cursor: pointer; transition: background 0.15s ease;
+      display: flex; align-items: center; padding: 1px 8px;
+      border-radius: 4px; cursor: pointer; transition: background 0.1s ease;
+      margin: 1px 8px;
     }
-    .member-item:hover { background: rgba(255,255,255,0.04); }
+    .member-item:hover { background: #35373c; }
     .member-item .member-avatar { position: relative; }
     .member-item .status-dot {
-      position: absolute; bottom: -1px; right: -1px;
+      position: absolute; bottom: -2px; right: -2px;
       width: 10px; height: 10px; border-radius: 50%;
-      border: 2px solid #0d1f2d;
+      border: 3px solid #2b2d31;
     }
     .status-dot.online {
-      background: #22c55e;
-      box-shadow: 0 0 6px rgba(34,197,94,0.5);
+      background: #23a55a;
     }
     .status-dot.idle { background: #f0b232; }
-    .status-dot.dnd { background: var(--accent-red); }
-    .status-dot.offline { background: var(--text-muted); }
+    .status-dot.dnd { background: #ed4245; }
+    .status-dot.offline { background: #80848e; }
 
     /* Files section in members panel */
     .files-section {
       margin-top: 16px;
       padding-top: 12px;
-      border-top: 1px solid var(--border-glass);
+      border-top: 1px solid #3f4147;
     }
     .file-item {
       display: flex; align-items: center; gap: 8px;
-      padding: 6px 8px; border-radius: 8px;
-      cursor: pointer; transition: background 0.15s ease;
+      padding: 6px 8px; border-radius: 4px;
+      cursor: pointer; transition: background 0.1s ease;
     }
-    .file-item:hover { background: rgba(255,255,255,0.04); }
+    .file-item:hover { background: #35373c; }
     .file-item .file-icon {
-      width: 32px; height: 32px; border-radius: 8px;
+      width: 32px; height: 32px; border-radius: 4px;
       display: flex; align-items: center; justify-content: center;
-      background: rgba(0,212,170,0.1); color: var(--accent-primary);
+      background: rgba(88,101,242,0.1); color: #5865f2;
       flex-shrink: 0;
     }
 
     /* Video PiP */
     #video-pip-container {
       display: none; position: fixed; bottom: 80px; right: 24px; z-index: 100;
-      width: 320px; height: 180px; border-radius: 16px; overflow: hidden;
-      background: #000; border: 1px solid rgba(0,212,170,0.3);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 20px rgba(0,212,170,0.15);
+      width: 320px; height: 180px; border-radius: 8px; overflow: hidden;
+      background: #000; border: 1px solid #3f4147;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       cursor: pointer; transition: all 0.25s ease;
     }
     #video-pip-container:hover {
-      border-color: var(--accent-primary);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 30px rgba(0,212,170,0.25);
+      border-color: #4e5058;
       transform: scale(1.02);
     }
     #video-pip-container video { width: 100%; height: 100%; object-fit: contain; }
@@ -284,13 +266,13 @@
     #video-pip-container:hover .pip-overlay { opacity: 1; }
     #video-pip-container .pip-overlay span { font-size: 11px; color: #fff; font-weight: 500; }
     #video-pip-container .pip-overlay button {
-      background: rgba(255,255,255,0.1); backdrop-filter: blur(8px);
+      background: rgba(255,255,255,0.1);
       border: 1px solid rgba(255,255,255,0.1);
-      color: white; border-radius: 8px; padding: 4px 8px; cursor: pointer;
+      color: white; border-radius: 4px; padding: 4px 8px; cursor: pointer;
       display: flex; align-items: center; gap: 4px; font-size: 10px; transition: all 0.15s ease;
     }
     #video-pip-container .pip-overlay button:hover {
-      background: rgba(0,212,170,0.6); border-color: rgba(0,212,170,0.4);
+      background: #5865f2;
     }
     #video-pip-container .pip-close {
       position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.5);
@@ -305,26 +287,25 @@
     /* Video expanded */
     #video-expanded-container {
       display: none; position: fixed; inset: 0; z-index: 90;
-      background: var(--bg-deepest); flex-direction: column;
+      background: #1e1f22; flex-direction: column;
     }
     #video-expanded-container.active { display: flex; }
     #video-expanded-container video { flex: 1; width: 100%; object-fit: contain; background: #000; }
     #video-expanded-container .expanded-bar {
-      height: 44px; background: rgba(13,31,45,0.8); display: flex; align-items: center;
+      height: 44px; background: #2b2d31; display: flex; align-items: center;
       padding: 0 16px; justify-content: space-between; flex-shrink: 0;
-      border-bottom: 1px solid var(--border-glass); backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid #1f2023;
     }
-    #video-expanded-container .expanded-bar span { color: var(--text-primary); font-size: 13px; font-weight: 600; }
+    #video-expanded-container .expanded-bar span { color: #f2f3f5; font-size: 13px; font-weight: 600; }
     #video-expanded-container .expanded-bar button {
-      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.06);
-      color: var(--text-primary);
-      border-radius: 8px; padding: 5px 12px; cursor: pointer;
+      background: #4e5058; border: none;
+      color: #f2f3f5;
+      border-radius: 4px; padding: 5px 12px; cursor: pointer;
       display: flex; align-items: center; gap: 5px;
       font-size: 12px; font-weight: 500; transition: all 0.15s ease;
     }
     #video-expanded-container .expanded-bar button:hover {
-      background: rgba(0,212,170,0.4); border-color: rgba(0,212,170,0.3);
+      background: #5865f2;
     }
 
     /* ═══ SETTINGS MODAL ═══ */
@@ -332,70 +313,60 @@
     #settings-modal.open { display: flex; }
     #settings-modal .settings-overlay {
       position: absolute; inset: 0;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      background: rgba(0,0,0,0.7);
     }
     #settings-modal .settings-wrapper { position: relative; display: flex; width: 100%; height: 100%; z-index: 1; }
     #settings-modal .settings-sidebar {
-      width: 240px; background: rgba(13,31,45,0.6); padding: 60px 12px 20px 20px;
+      width: 240px; background: #2b2d31; padding: 60px 12px 20px 20px;
       overflow-y: auto; flex-shrink: 0;
-      border-right: 1px solid var(--border-glass);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
+      border-right: 1px solid #1f2023;
     }
     #settings-modal .settings-sidebar .user-card {
       display: flex; align-items: center; gap: 10px; padding: 10px;
-      margin-bottom: 16px; background: var(--bg-surface); border-radius: 12px;
-      border: 1px solid var(--border-glass);
+      margin-bottom: 16px; background: #1e1f22; border-radius: 8px;
     }
     #settings-modal .settings-sidebar .user-card img {
-      width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--accent-primary);
+      width: 40px; height: 40px; border-radius: 50%;
     }
-    #settings-modal .settings-sidebar .user-card .name { color: var(--text-primary); font-size: 14px; font-weight: 600; }
-    #settings-modal .settings-sidebar .user-card .discriminator { color: var(--text-secondary); font-size: 12px; }
+    #settings-modal .settings-sidebar .user-card .name { color: #f2f3f5; font-size: 14px; font-weight: 600; }
+    #settings-modal .settings-sidebar .user-card .discriminator { color: #949ba4; font-size: 12px; }
     #settings-modal .settings-sidebar .search-box {
-      width: 100%; padding: 8px 10px; background: var(--bg-surface);
-      border: 1px solid var(--border-glass);
-      border-radius: 10px; color: var(--text-primary); font-size: 13px;
-      margin-bottom: 12px; outline: none; transition: border-color 0.2s ease;
+      width: 100%; padding: 8px 10px; background: #1e1f22;
+      border: none;
+      border-radius: 4px; color: #f2f3f5; font-size: 13px;
+      margin-bottom: 12px; outline: none;
     }
-    #settings-modal .settings-sidebar .search-box:focus {
-      border-color: rgba(0,212,170,0.4);
-      box-shadow: 0 0 0 3px rgba(0,212,170,0.08);
-    }
-    #settings-modal .settings-sidebar .search-box::placeholder { color: var(--text-muted); }
+    #settings-modal .settings-sidebar .search-box::placeholder { color: #5c5e66; }
     #settings-modal .settings-sidebar .section-label {
-      color: var(--text-muted); font-size: 11px; font-weight: 700;
+      color: #949ba4; font-size: 11px; font-weight: 700;
       text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px; margin-top: 8px;
     }
     #settings-modal .settings-sidebar .nav-item {
-      padding: 8px 10px; border-radius: 10px; font-size: 14px; color: var(--text-secondary);
-      cursor: pointer; transition: all 0.2s ease; margin-bottom: 2px; font-weight: 500;
+      padding: 8px 10px; border-radius: 4px; font-size: 14px; color: #949ba4;
+      cursor: pointer; transition: all 0.1s ease; margin-bottom: 2px; font-weight: 500;
     }
     #settings-modal .settings-sidebar .nav-item:hover {
-      background: var(--bg-hover); color: var(--text-primary);
+      background: #35373c; color: #f2f3f5;
     }
     #settings-modal .settings-sidebar .nav-item.active {
-      background: rgba(0,212,170,0.1); color: #fff;
-      border-left: 3px solid var(--accent-primary);
+      background: #404249; color: #fff;
     }
     #settings-modal .settings-sidebar .divider {
-      height: 1px; background: var(--border-glass); margin: 8px 0;
+      height: 1px; background: #3f4147; margin: 8px 0;
     }
     #settings-modal .settings-content {
       flex: 1; overflow-y: auto; padding: 40px 60px;
-      background: rgba(10,22,40,0.4);
+      background: #313338;
     }
     #settings-modal .settings-close {
       position: fixed; top: 20px; right: 30px; z-index: 10; width: 38px; height: 38px;
-      border-radius: 50%; border: 2px solid var(--text-muted);
+      border-radius: 50%; border: 2px solid #5c5e66;
       display: flex; align-items: center; justify-content: center;
-      color: var(--text-secondary); cursor: pointer;
+      color: #949ba4; cursor: pointer;
       transition: all 0.25s ease; background: transparent;
     }
     #settings-modal .settings-close:hover {
-      border-color: var(--text-primary); color: #fff; transform: rotate(90deg);
+      border-color: #f2f3f5; color: #fff; transform: rotate(90deg);
     }
     #settings-modal .settings-close span { font-size: 12px; font-weight: 600; }
     #settings-modal h2 { color: var(--text-primary); font-size: 20px; font-weight: 700; margin-bottom: 20px; }
@@ -409,66 +380,60 @@
       text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
     }
     #settings-modal .device-select {
-      width: 100%; padding: 10px 12px; background: var(--bg-surface);
-      border: 1px solid var(--border-glass);
-      border-radius: 10px; color: var(--text-primary); font-size: 14px;
+      width: 100%; padding: 10px 12px; background: #1e1f22;
+      border: none;
+      border-radius: 4px; color: #f2f3f5; font-size: 14px;
       outline: none; cursor: pointer; appearance: none;
-      transition: border-color 0.2s ease;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237b8fa3' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23949ba4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
       background-repeat: no-repeat; background-position: right 12px center;
     }
-    #settings-modal .device-select:hover { border-color: var(--accent-primary); }
+    #settings-modal .device-select:hover { background-color: #2b2d31; }
     #settings-modal .device-select:focus {
-      border-color: var(--accent-primary);
-      box-shadow: 0 0 0 3px rgba(0,212,170,0.08);
+      outline: 2px solid #5865f2;
     }
     #settings-modal .device-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     #settings-modal .range-slider {
       -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px;
-      background: var(--bg-surface); outline: none; cursor: pointer;
+      background: #1e1f22; outline: none; cursor: pointer;
     }
     #settings-modal .range-slider::-webkit-slider-thumb {
       -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
-      background: var(--accent-primary); cursor: pointer; border: none;
-      box-shadow: 0 0 8px rgba(0,212,170,0.4);
+      background: #fff; cursor: pointer; border: none;
     }
     #settings-modal .range-slider::-moz-range-thumb {
       width: 16px; height: 16px; border-radius: 50%;
-      background: var(--accent-primary); cursor: pointer; border: none;
+      background: #fff; cursor: pointer; border: none;
     }
     #settings-modal .mic-test-row { display: flex; align-items: center; gap: 12px; }
     #settings-modal .mic-test-btn {
-      padding: 8px 20px; background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-      color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
+      padding:8px 20px; background:#5865f2;
+      color: #fff; border: none; border-radius: 4px; font-size: 14px; font-weight: 600;
       cursor: pointer; white-space: nowrap; transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(0,212,170,0.3);
     }
     #settings-modal .mic-test-btn:hover {
-      transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,212,170,0.4);
+      background: #4752c4;
     }
     #settings-modal .mic-test-btn.testing {
-      background: linear-gradient(135deg, var(--accent-red), #c03537);
-      box-shadow: 0 4px 12px rgba(239,68,68,0.3);
+      background: #ed4245;
     }
-    #settings-modal .mic-test-btn.testing:hover { box-shadow: 0 6px 20px rgba(239,68,68,0.4); }
     #settings-modal .mic-bars { display: flex; align-items: flex-end; gap: 2px; height: 24px; }
     #settings-modal .mic-bar {
-      width: 4px; background: var(--accent-primary); border-radius: 2px;
+      width: 4px; background: #5865f2; border-radius: 2px;
       transition: height 0.05s; min-height: 3px;
     }
     #settings-modal .input-profile-option {
       display: flex; align-items: flex-start; gap: 12px; padding: 12px;
-      border: 1px solid var(--border-glass); border-radius: 10px; margin-bottom: 8px;
-      cursor: pointer; transition: all 0.2s ease; background: var(--bg-surface);
+      border: 1px solid #3f4147; border-radius: 4px; margin-bottom: 8px;
+      cursor: pointer; transition: all 0.1s ease; background: #1e1f22;
     }
     #settings-modal .input-profile-option:hover {
-      background: var(--bg-elevated); border-color: var(--border-glass-hover);
+      background: #35373c;
     }
     #settings-modal .input-profile-option.selected {
-      border-color: var(--accent-primary); background: rgba(0,212,170,0.08);
+      border-color: #5865f2; background: rgba(88,101,242,0.08);
     }
     #settings-modal .input-profile-option input[type="radio"] {
-      accent-color: var(--accent-primary); margin-top: 2px; flex-shrink: 0;
+      accent-color: #5865f2; margin-top: 2px; flex-shrink: 0;
     }
     #settings-modal .input-profile-option .profile-title { color: var(--text-primary); font-size: 14px; font-weight: 600; }
     #settings-modal .input-profile-option .profile-desc { color: var(--text-secondary); font-size: 12px; margin-top: 2px; }
@@ -476,7 +441,7 @@
     #settings-modal .toggle-switch { position: relative; width: 40px; height: 22px; cursor: pointer; flex-shrink: 0; }
     #settings-modal .toggle-switch input { opacity: 0; width: 0; height: 0; }
     #settings-modal .toggle-slider {
-      position: absolute; inset: 0; background: #4e5058; border-radius: 11px;
+      position: absolute; inset: 0; background: #80848e; border-radius: 11px;
       transition: background 0.2s;
     }
     #settings-modal .toggle-slider::before {
@@ -488,7 +453,7 @@
     #settings-modal .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
     #settings-modal .sensitivity-bar {
       width: 100%; height: 8px; border-radius: 4px;
-      background: linear-gradient(to right, #f0b232 0%, #f0b232 40%, var(--accent-primary) 40%, var(--accent-primary) 100%);
+      background: linear-gradient(to right, #f0b232 0%, #f0b232 40%, #23a55a 40%, #23a55a 100%);
       position: relative; margin-top: 8px;
     }
     #settings-modal .sensitivity-indicator {
@@ -501,51 +466,45 @@
     #emoji-picker {
       display: none; position: absolute; bottom: 100%; left: 0;
       width: 352px; max-height: 420px;
-      background: rgba(13,31,45,0.85); border-radius: 16px;
-      box-shadow: 0 12px 40px rgba(0,0,0,0.6); z-index: 50;
+      background: #2b2d31; border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 50;
       flex-direction: column;
-      border: 1px solid var(--border-glass); margin-bottom: 4px;
-      backdrop-filter: blur(24px);
-      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid #1f2023; margin-bottom: 4px;
     }
     #emoji-picker.open { display: flex; }
     #emoji-picker .emoji-search {
-      padding: 10px; border-bottom: 1px solid var(--border-glass);
+      padding: 10px; border-bottom: 1px solid #3f4147;
     }
     #emoji-picker .emoji-search input {
-      width: 100%; padding: 8px 10px; background: var(--bg-surface);
-      border: 1px solid var(--border-glass);
-      border-radius: 10px; color: var(--text-primary); font-size: 13px;
-      outline: none; transition: border-color 0.2s ease;
-    }
-    #emoji-picker .emoji-search input:focus {
-      border-color: rgba(0,212,170,0.4);
-      box-shadow: 0 0 0 3px rgba(0,212,170,0.08);
+      width: 100%; padding: 8px 10px; background: #1e1f22;
+      border: none;
+      border-radius: 4px; color: #f2f3f5; font-size: 13px;
+      outline: none;
     }
     #emoji-picker .emoji-categories {
       display: flex; gap: 2px; padding: 6px 10px;
-      border-bottom: 1px solid var(--border-glass);
+      border-bottom: 1px solid #3f4147;
     }
     #emoji-picker .emoji-cat-btn {
-      padding: 4px 8px; border-radius: 8px; cursor: pointer;
-      font-size: 16px; background: transparent; border: none; transition: all 0.15s ease;
+      padding: 4px 8px; border-radius: 4px; cursor: pointer;
+      font-size: 16px; background: transparent; border: none; transition: all 0.1s ease;
     }
-    #emoji-picker .emoji-cat-btn:hover { background: var(--bg-hover); }
-    #emoji-picker .emoji-cat-btn.active { background: var(--bg-elevated); }
+    #emoji-picker .emoji-cat-btn:hover { background: #35373c; }
+    #emoji-picker .emoji-cat-btn.active { background: #404249; }
     #emoji-picker .emoji-grid {
       flex: 1; overflow-y: auto; padding: 8px 10px;
       display: grid; grid-template-columns: repeat(9, 1fr); gap: 2px;
     }
-    #emoji-picker .emoji-grid::-webkit-scrollbar { width: 6px; }
+    #emoji-picker .emoji-grid::-webkit-scrollbar { width: 8px; }
     #emoji-picker .emoji-grid::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.08); border-radius: 3px;
+      background: #1a1b1e; border-radius: 4px;
     }
     #emoji-picker .emoji-item {
       width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-      border-radius: 8px; cursor: pointer; font-size: 22px; transition: all 0.15s ease;
+      border-radius: 4px; cursor: pointer; font-size: 22px; transition: all 0.1s ease;
     }
     #emoji-picker .emoji-item:hover {
-      background: rgba(255,255,255,0.05); transform: scale(1.15);
+      background: #35373c; transform: scale(1.15);
     }
     #emoji-picker .emoji-section-label {
       grid-column: 1 / -1; font-size: 11px; font-weight: 700;
@@ -554,186 +513,148 @@
     }
 
     /* ═══ AUTH SCREEN ═══ */
-    #auth-screen { background: var(--bg-deepest) !important; }
+    #auth-screen { background: #5865f2 !important; }
     #auth-screen > div > div {
-      background: rgba(13,31,45,0.6) !important;
-      backdrop-filter: blur(32px) saturate(1.5) !important;
-      -webkit-backdrop-filter: blur(32px) saturate(1.5) !important;
-      border: 1px solid var(--border-glass) !important;
-      border-radius: 24px !important;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03) inset,
-                  0 0 40px rgba(0,212,170,0.08) !important;
+      background: #313338 !important;
+      border: none !important;
+      border-radius: 8px !important;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.1) !important;
     }
     #auth-screen::before {
       content: ''; position: fixed; inset: 0; z-index: 0;
-      background: radial-gradient(ellipse at 20% 50%, rgba(0,212,170,0.2) 0%, transparent 50%),
-                  radial-gradient(ellipse at 80% 20%, rgba(14,165,233,0.12) 0%, transparent 50%),
-                  radial-gradient(ellipse at 50% 80%, rgba(0,212,170,0.08) 0%, transparent 50%);
-      animation: authGlow 8s ease-in-out infinite alternate; pointer-events: none;
+      background: #5865f2;
+      pointer-events: none;
     }
-    @keyframes authGlow { 0% { opacity: 0.5; } 100% { opacity: 1; } }
     #auth-screen input {
-      background: var(--bg-surface) !important;
-      border: 1px solid var(--border-glass) !important;
-      transition: border-color 0.2s, box-shadow 0.2s !important;
-      color: var(--text-primary) !important;
-      border-radius: 12px !important;
+      background: #1e1f22 !important;
+      border: 1px solid #1e1f22 !important;
+      transition: border-color 0.2s !important;
+      color: #f2f3f5 !important;
+      border-radius: 4px !important;
     }
     #auth-screen input:focus {
-      border-color: var(--accent-primary) !important;
-      box-shadow: 0 0 0 3px rgba(0,212,170,0.15) !important;
+      border-color: #5865f2 !important;
     }
     #auth-screen button[type="submit"] {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
-      box-shadow: 0 4px 15px rgba(0,212,170,0.4) !important;
-      transition: all 0.25s !important;
-      border-radius: 12px !important;
+      background: #5865f2 !important;
+      transition: all 0.2s !important;
+      border-radius: 4px !important;
     }
     #auth-screen button[type="submit"]:hover {
-      transform: translateY(-2px) !important;
-      box-shadow: 0 8px 25px rgba(0,212,170,0.5) !important;
+      background: #4752c4 !important;
     }
-    #auth-screen button[type="submit"]:active { transform: translateY(0) !important; }
+    #auth-screen button[type="submit"]:active { transform: none !important; }
 
     @keyframes logoPulse {
-      0%, 100% { box-shadow: 0 0 30px rgba(0,212,170,0.5), 0 0 60px rgba(14,165,233,0.3); }
-      50% { box-shadow: 0 0 40px rgba(0,212,170,0.7), 0 0 80px rgba(14,165,233,0.5); }
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: none; }
     }
 
     /* ═══ MAIN LAYOUT ═══ */
     #chat-screen {
-      background:
-        radial-gradient(ellipse at 20% 50%, rgba(0,212,170,0.08) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 20%, rgba(14,165,233,0.06) 0%, transparent 50%),
-        radial-gradient(ellipse at 50% 80%, rgba(0,212,170,0.04) 0%, transparent 50%),
-        linear-gradient(135deg, #0a1628 0%, #0d1f2d 40%, #112233 100%) !important;
+      background: #313338 !important;
     }
 
     /* Server sidebar */
     #server-sidebar {
-      background: linear-gradient(180deg, #0a1628 0%, #0d1f2d 50%, #0a1628 100%) !important;
-      border-right: 1px solid var(--border-glass) !important;
+      background: #1e1f22 !important;
+      border-right: 1px solid #1f2023 !important;
     }
 
     /* Channel sidebar */
     #channel-sidebar {
-      background: rgba(13,31,45,0.85) !important;
-      border-right: 1px solid var(--border-glass) !important;
-      backdrop-filter: blur(20px) !important;
-      -webkit-backdrop-filter: blur(20px) !important;
+      background: #2b2d31 !important;
+      border-right: 1px solid #1f2023 !important;
     }
 
     /* Channel header */
     .h-12.px-4.flex.items-center.border-b {
-      background: rgba(13,31,45,0.8) !important;
-      backdrop-filter: blur(16px) !important;
-      -webkit-backdrop-filter: blur(16px) !important;
-      border-bottom: 1px solid var(--border-glass) !important;
+      background: #313338 !important;
+      border-bottom: 1px solid #1f2023 !important;
     }
 
     /* Voice connected panel */
     #voice-connected-panel {
-      background: rgba(13,31,45,0.95) !important;
-      backdrop-filter: blur(16px) !important;
-      -webkit-backdrop-filter: blur(16px) !important;
-      border-top: 1px solid var(--border-glass) !important;
+      background: #2b2d31 !important;
+      border-top: 1px solid #1f2023 !important;
     }
     #voice-connected-panel button {
-      border-radius: 10px !important; font-weight: 500 !important;
-      transition: all 0.2s ease !important;
+      border-radius: 4px !important; font-weight: 500 !important;
+      transition: all 0.1s ease !important;
     }
-    #voice-connected-panel button:hover { transform: translateY(-1px); }
     #disconnect-voice-btn {
-      background: linear-gradient(135deg, var(--accent-red), #c03537) !important;
-      box-shadow: 0 2px 8px rgba(239,68,68,0.3) !important;
+      background: #ed4245 !important;
     }
-    #disconnect-voice-btn:hover { box-shadow: 0 4px 12px rgba(239,68,68,0.4) !important; }
 
     /* Modals */
-    .modal-backdrop { backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important; }
     #create-server-modal > div, #join-server-modal > div, #invite-modal > div, #create-channel-modal > div {
-      background: rgba(13,31,45,0.8) !important;
-      backdrop-filter: blur(24px) !important;
-      -webkit-backdrop-filter: blur(24px) !important;
-      border: 1px solid var(--border-glass) !important;
-      border-radius: 20px !important;
-      box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,212,170,0.05) !important;
+      background: #313338 !important;
+      border: none !important;
+      border-radius: 8px !important;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.1) !important;
     }
     #create-server-modal input, #join-server-modal input, #create-channel-modal input,
     #create-server-modal select, #create-channel-modal select {
-      background: var(--bg-surface) !important;
-      border: 1px solid var(--border-glass) !important;
-      color: var(--text-primary) !important;
-      border-radius: 10px !important;
-      transition: border-color 0.2s, box-shadow 0.2s !important;
+      background: #1e1f22 !important;
+      border: 1px solid #1e1f22 !important;
+      color: #f2f3f5 !important;
+      border-radius: 4px !important;
     }
     #create-server-modal input:focus, #join-server-modal input:focus,
     #create-channel-modal input:focus, #create-server-modal select:focus,
     #create-channel-modal select:focus {
-      border-color: var(--accent-primary) !important;
-      box-shadow: 0 0 0 3px rgba(0,212,170,0.15) !important;
+      border-color: #5865f2 !important;
     }
     #create-server-btn, #create-channel-btn {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
-      box-shadow: 0 4px 12px rgba(0,212,170,0.3) !important;
+      background: #5865f2 !important;
       transition: all 0.2s !important;
-      border-radius: 12px !important;
+      border-radius: 4px !important;
     }
     #create-server-btn:hover, #create-channel-btn:hover {
-      box-shadow: 0 6px 20px rgba(0,212,170,0.4) !important;
-      transform: translateY(-1px) !important;
+      background: #4752c4 !important;
     }
     #join-server-btn {
-      background: linear-gradient(135deg, var(--accent-green), #1a8045) !important;
-      box-shadow: 0 4px 12px rgba(35,165,90,0.3) !important;
+      background: #23a55a !important;
       transition: all 0.2s !important;
-      border-radius: 12px !important;
+      border-radius: 4px !important;
     }
     #join-server-btn:hover {
-      box-shadow: 0 6px 20px rgba(35,165,90,0.4) !important;
-      transform: translateY(-1px) !important;
+      background: #1a7d42 !important;
     }
 
     /* Message input */
     .message-input-wrapper {
-      background: rgba(13,31,45,0.6) !important;
-      border: 1px solid var(--border-glass) !important;
-      border-radius: 16px !important;
-      backdrop-filter: blur(8px) !important;
-      -webkit-backdrop-filter: blur(8px) !important;
-      transition: border-color 0.2s, box-shadow 0.2s !important;
-    }
-    .message-input-wrapper:focus-within {
-      border-color: rgba(0,212,170,0.4) !important;
-      box-shadow: 0 0 0 3px rgba(0,212,170,0.08) !important;
+      background: #383a40 !important;
+      border: none !important;
+      border-radius: 8px !important;
     }
 
     /* User bar */
     .user-bar {
-      background: var(--bg-deepest) !important;
-      border-top: 1px solid var(--border-glass) !important;
+      background: #232428 !important;
+      border-top: 1px solid #1f2023 !important;
     }
 
     /* Invite button */
     #show-invite-btn {
-      background: linear-gradient(135deg, rgba(0,212,170,0.15), rgba(0,212,170,0.08)) !important;
-      border: 1px solid rgba(0,212,170,0.25) !important;
-      border-radius: 10px !important; transition: all 0.2s !important;
+      background: #5865f2 !important;
+      border: none !important;
+      border-radius: 4px !important;
     }
     #show-invite-btn:hover {
-      background: linear-gradient(135deg, rgba(0,212,170,0.25), rgba(0,212,170,0.15)) !important;
+      background: #4752c4 !important;
     }
 
     /* Copy invite */
     #copy-invite-btn {
-      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
-      border-radius: 8px !important;
+      background: #5865f2 !important;
+      border-radius: 4px !important;
     }
 
     /* Send button */
     #send-btn:disabled { opacity: 0.3; }
     #send-btn:not(:disabled) {
-      color: var(--accent-primary) !important;
+      color: #5865f2 !important;
     }
 
     /* ═══ MOBILE ═══ */
@@ -784,44 +705,44 @@
     }
   </style>
 </head>
-<body class="text-[#e2e8f0] h-screen flex">
+<body class="text-[#f2f3f5] h-screen flex">
 
   <!-- ═══ AUTH SCREEN ═════════════════════════════════════════════════════════ -->
-  <div id="auth-screen" class="fixed inset-0 bg-[#0a1628] modal-backdrop flex items-center justify-center z-50">
-    <div class="bg-[rgba(13,31,45,0.6)] backdrop-blur-3xl rounded-3xl shadow-2xl w-[420px] overflow-hidden border border-[rgba(255,255,255,0.06)]" style="box-shadow:0 25px 60px rgba(0,0,0,0.6),0 0 40px rgba(0,212,170,0.08);">
+  <div id="auth-screen" class="fixed inset-0 bg-[#5865f2] flex items-center justify-center z-50">
+    <div class="bg-[#313338] rounded-lg shadow-2xl w-[420px] overflow-hidden">
       <div class="p-8">
         <div class="text-center mb-6">
-          <div style="width:64px;height:64px;margin:0 auto 16px;border-radius:16px;background:linear-gradient(135deg,#00d4aa,#0ea5e9);display:flex;align-items:center;justify-content:center;box-shadow:0 0 30px rgba(0,212,170,0.5),0 0 60px rgba(14,165,233,0.3);position:relative;animation:logoPulse 3s ease-in-out infinite;">
+          <div style="width:64px;height:64px;margin:0 auto 16px;border-radius:50%;background:#5865f2;display:flex;align-items:center;justify-content:center;">
             <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
               <defs>
                 <linearGradient id="lv-grad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style="stop-color:#fff;stop-opacity:1"/>
-                  <stop offset="100%" style="stop-color:#e0dfff;stop-opacity:1"/>
+                  <stop offset="100%" style="stop-color:#fff;stop-opacity:1"/>
                 </linearGradient>
               </defs>
               <text x="50%" y="53%" text-anchor="middle" dominant-baseline="middle" fill="url(#lv-grad)" font-family="Arial Black, sans-serif" font-weight="900" font-size="18" letter-spacing="-1">LV</text>
             </svg>
-            <div style="position:absolute;inset:-2px;border-radius:18px;border:2px solid rgba(255,255,255,0.15);pointer-events:none;"></div>
+            <div style="position:absolute;inset:-2px;border-radius:18px;border:2px solid rgba(255,255,255,0.1);pointer-events:none;"></div>
           </div>
-          <h1 id="auth-title" class="text-2xl font-bold" style="background:linear-gradient(135deg,#00d4aa,#0ea5e9);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">LucasVitor</h1>
-          <p id="auth-subtitle" class="text-[#7b8fa3] mt-1">Conecte-se com seus amigos</p>
+          <h1 id="auth-title" class="text-2xl font-bold text-white">Entrar</h1>
+          <p id="auth-subtitle" class="text-[#949ba4] mt-1">Estamos muito felizes em te ver de volta!</p>
         </div>
-        <div id="error-message" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl mb-4 text-sm"></div>
+        <div id="error-message" class="hidden bg-[#ed4245]/20 border border-[#ed4245] text-[#ed4245] px-4 py-2 rounded mb-4 text-sm"></div>
         <form id="login-form" class="space-y-4">
-          <div><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Email</label><input id="login-email" type="email" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="email" required /></div>
-          <div><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Senha</label><input id="login-password" type="password" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="current-password" required /></div>
-          <button type="submit" id="login-submit" class="w-full py-2.5 bg-gradient-to-r from-[#00d4aa] to-[#0ea5e9] hover:from-[#00c49e] hover:to-[#0d94d4] text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">Entrar</button>
+          <div><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Email ou Número de Telefone</label><input id="login-email" type="email" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none" autocomplete="email" required /></div>
+          <div><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Senha</label><input id="login-password" type="password" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none" autocomplete="current-password" required /></div>
+          <button type="submit" id="login-submit" class="w-full py-2.5 bg-[#5865f2] hover:bg-[#4752c4] text-white font-semibold rounded transition-all">Entrar</button>
         </form>
         <form id="register-form" class="space-y-4 hidden">
-          <div><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Nome de Usuario</label><input id="register-username" type="text" maxlength="20" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="username" required /></div>
-          <div><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Email</label><input id="register-email" type="email" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="email" required /></div>
-          <div><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Senha</label><input id="register-password" type="password" minlength="6" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="new-password" required /></div>
-          <div><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Confirmar Senha</label><input id="register-confirm-password" type="password" minlength="6" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]" autocomplete="new-password" required /></div>
-          <button type="submit" id="register-submit" class="w-full py-2.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">Cadastrar</button>
+          <div><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Email</label><input id="register-email" type="email" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none" autocomplete="email" required /></div>
+          <div><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Nome de Exibição</label><input id="register-username" type="text" maxlength="20" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none" autocomplete="username" required /></div>
+          <div><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Nome de Usuário</label><input id="register-username2" type="text" maxlength="20" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none" autocomplete="username" /></div>
+          <div><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Senha</label><input id="register-password" type="password" minlength="6" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none" autocomplete="new-password" required /></div>
+          <button type="submit" id="register-submit" class="w-full py-2.5 bg-[#23a55a] hover:bg-[#1a7d42] text-white font-semibold rounded transition-all">Continuar</button>
         </form>
         <div class="mt-4 text-center">
-          <span id="auth-toggle-text" class="text-sm text-[#7b8fa3]">Nao tem uma conta?</span>
-          <button id="auth-toggle-btn" class="text-sm text-[#00d4aa] hover:underline ml-1 font-medium">Cadastre-se</button>
+          <span id="auth-toggle-text" class="text-sm text-[#949ba4]">Precisa de uma conta?</span>
+          <button id="auth-toggle-btn" class="text-sm text-[#5865f2] hover:underline ml-1 font-medium">Registrar</button>
         </div>
       </div>
     </div>
@@ -835,26 +756,26 @@
     <div id="mobile-overlay"></div>
 
     <!-- Server Sidebar (icons) -->
-    <div class="w-[72px] flex flex-col items-center py-3 gap-2 overflow-y-auto border-r border-[rgba(255,255,255,0.06)]" id="server-sidebar" style="background:linear-gradient(180deg,#0a1628 0%,#0d1f2d 50%,#0a1628 100%);">
-      <div id="mobile-menu-btn" class="server-icon w-12 h-12 bg-[rgba(255,255,255,0.06)] hover:bg-[#00d4aa] rounded-[50%] items-center justify-center cursor-pointer transition-all text-white mb-2 hidden" title="Menu">
+    <div class="w-[72px] flex flex-col items-center py-3 gap-2 overflow-y-auto border-r border-[#1f2023]" id="server-sidebar" style="background:#1e1f22;">
+      <div id="mobile-menu-btn" class="server-icon w-12 h-12 bg-[#313338] hover:bg-[#5865f2] rounded-[50%] items-center justify-center cursor-pointer transition-all text-[#23a55a] hover:text-white mb-2 hidden" title="Menu">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </div>
       <div class="relative">
         <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 bg-white rounded-r-full server-pill h-0 transition-all" id="home-pill"></div>
-        <div id="home-server-btn" class="server-icon w-12 h-12 rounded-[50%] flex items-center justify-center cursor-pointer transition-all" style="background:linear-gradient(135deg,#00d4aa,#0ea5e9);" title="Mensagens Diretas">
+        <div id="home-server-btn" class="server-icon w-12 h-12 rounded-[50%] flex items-center justify-center cursor-pointer transition-all" style="background:#5865f2;" title="Mensagens Diretas">
           <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none"><text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="Arial Black, sans-serif" font-weight="900" font-size="9" letter-spacing="-0.5">LV</text></svg>
         </div>
       </div>
-      <div class="w-8 h-0.5 bg-[rgba(255,255,255,0.06)] rounded-full my-1"></div>
+      <div class="w-8 h-0.5 bg-[#3f4147] rounded-full my-1"></div>
       <div id="server-list" class="flex flex-col gap-2 items-center"></div>
-      <div class="w-8 h-0.5 bg-[rgba(255,255,255,0.06)] rounded-full my-1"></div>
+      <div class="w-8 h-0.5 bg-[#3f4147] rounded-full my-1"></div>
       <div class="relative">
-        <div id="add-server-btn" class="server-icon w-12 h-12 bg-[rgba(255,255,255,0.06)] hover:bg-[#00d4aa] rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-[#00d4aa] hover:text-white" title="Criar Servidor">
+        <div id="add-server-btn" class="server-icon w-12 h-12 bg-[#313338] hover:bg-[#23a55a] rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-[#23a55a] hover:text-white" title="Criar Servidor">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
         </div>
       </div>
       <div class="relative">
-        <div id="join-server-sidebar-btn" class="server-icon w-12 h-12 bg-[rgba(255,255,255,0.06)] hover:bg-[#0ea5e9] rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-[#0ea5e9] hover:text-white" title="Entrar com Codigo">
+        <div id="join-server-sidebar-btn" class="server-icon w-12 h-12 bg-[#313338] hover:bg-[#23a55a] rounded-[50%] flex items-center justify-center cursor-pointer transition-all text-[#23a55a] hover:text-white" title="Entrar com Codigo">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         </div>
       </div>
@@ -863,16 +784,16 @@
     <!-- Channel Sidebar -->
     <div class="w-60 flex flex-col" id="channel-sidebar">
       <!-- Server Header -->
-      <div class="h-12 px-4 flex items-center border-b border-[rgba(255,255,255,0.06)] shadow-md cursor-pointer hover:bg-[rgba(255,255,255,0.04)]" id="server-header" style="background:rgba(13,31,45,0.8);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);">
-        <span class="text-white font-bold text-lg truncate flex-1" id="server-name-display">Selecione um servidor</span>
-        <svg class="w-4 h-4 text-[#7b8fa3]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      <div class="h-12 px-4 flex items-center border-b border-[#1f2023] shadow-sm cursor-pointer hover:bg-[#35373c]" id="server-header" style="background:#2b2d31;">
+        <span class="text-white font-semibold text-base truncate flex-1" id="server-name-display">Selecione um servidor</span>
+        <svg class="w-4 h-4 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
       </div>
 
       <!-- Channels List -->
       <div class="flex-1 overflow-y-auto py-4 px-2">
         <div class="flex items-center justify-between px-2 mb-2">
-          <span class="text-xs font-semibold text-[#4a6274] uppercase tracking-wider">Canais</span>
-          <button id="add-channel-btn" class="text-[#4a6274] hover:text-white hidden" title="Criar Canal">
+          <span class="text-[11px] font-semibold text-[#949ba4] uppercase tracking-wider">Canais</span>
+          <button id="add-channel-btn" class="text-[#949ba4] hover:text-white hidden" title="Criar Canal">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           </button>
         </div>
@@ -880,31 +801,31 @@
       </div>
 
       <!-- Voice Connected Panel -->
-      <div id="voice-connected-panel" class="hidden px-2 py-2" style="background:rgba(13,31,45,0.95);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,0.06);">
+      <div id="voice-connected-panel" class="hidden px-2 py-2" style="background:#2b2d31;border-top:1px solid #1f2023;">
         <div class="flex items-center mb-2 px-1">
-          <div class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-          <span class="text-green-400 text-xs font-semibold uppercase flex-1">Voz Conectada</span>
+          <div class="w-2 h-2 bg-[#23a55a] rounded-full mr-2"></div>
+          <span class="text-[#23a55a] text-xs font-semibold uppercase flex-1">Voz Conectada</span>
         </div>
-        <div id="voice-channel-label" class="text-[#7b8fa3] text-xs px-1 mb-2 truncate"></div>
+        <div id="voice-channel-label" class="text-[#949ba4] text-xs px-1 mb-2 truncate"></div>
         <div id="voice-users-list" class="space-y-0.5 mb-2 max-h-24 overflow-y-auto"></div>
         <div class="flex gap-1 px-1">
-          <button id="mute-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl text-xs transition-colors" title="Mutar/Desmutar">
+          <button id="mute-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#383a40] hover:bg-[#4e5058] rounded text-xs transition-colors" title="Mutar/Desmutar">
             <svg id="mic-on-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
             <svg id="mic-off-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
           </button>
-          <button id="deafen-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl text-xs transition-colors" title="Abafar (mutar fone + mic)">
+          <button id="deafen-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#383a40] hover:bg-[#4e5058] rounded text-xs transition-colors" title="Abafar (mutar fone + mic)">
             <svg id="ear-on-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
             <svg id="ear-off-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
-          <button id="camera-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl text-xs transition-colors" title="Camera">
+          <button id="camera-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#383a40] hover:bg-[#4e5058] rounded text-xs transition-colors" title="Camera">
             <svg id="cam-on-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
             <svg id="cam-off-icon" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
           </button>
-          <button id="screen-share-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] rounded-xl text-xs transition-colors" title="Compartilhar Tela">
+          <button id="screen-share-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#383a40] hover:bg-[#4e5058] rounded text-xs transition-colors" title="Compartilhar Tela">
             <svg id="screen-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
             <span id="screen-btn-text">Tela</span>
           </button>
-          <button id="disconnect-voice-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-xl text-xs text-white transition-colors" title="Desconectar do canal de voz" style="background:linear-gradient(135deg,#ef4444,#c03537);box-shadow:0 2px 8px rgba(239,68,68,0.3);">
+          <button id="disconnect-voice-btn" class="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-white transition-colors" title="Desconectar do canal de voz" style="background:#ed4245;">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"/></svg>
             Sair
           </button>
@@ -912,23 +833,23 @@
       </div>
 
       <!-- User Profile Bar -->
-      <div class="px-2 py-1.5 flex items-center user-bar" style="background:#0a1628;border-top:1px solid rgba(255,255,255,0.06);">
+      <div class="px-2 py-1.5 flex items-center user-bar" style="background:#232428;border-top:1px solid #1f2023;">
         <img id="user-avatar" class="w-8 h-8 rounded-full mr-2 cursor-pointer hover:opacity-80 transition-opacity" alt="avatar" title="Trocar avatar" />
         <div class="flex-1 min-w-0">
           <div class="text-white text-xs font-medium truncate" id="current-username">Usuario</div>
-          <div class="text-[#4a6274] text-[10px]">Online</div>
+          <div class="text-[#949ba4] text-[10px]">Online</div>
         </div>
         <div class="flex items-center gap-0.5">
-          <button id="user-mic-btn" class="p-1.5 rounded-xl hover:bg-[rgba(255,255,255,0.04)] text-[#7b8fa3] hover:text-[#e2e8f0] transition-colors" title="Microfone">
+          <button id="user-mic-btn" class="p-1.5 rounded hover:bg-[#35373c] text-[#b5bac1] hover:text-[#f2f3f5] transition-colors" title="Microfone">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
           </button>
-          <button id="user-deafen-btn" class="p-1.5 rounded-xl hover:bg-[rgba(255,255,255,0.04)] text-[#7b8fa3] hover:text-[#e2e8f0] transition-colors" title="Deafen">
+          <button id="user-deafen-btn" class="p-1.5 rounded hover:bg-[#35373c] text-[#b5bac1] hover:text-[#f2f3f5] transition-colors" title="Deafen">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
           </button>
-          <button id="logout-btn" class="p-1.5 rounded-xl hover:bg-[rgba(255,255,255,0.04)] text-[#7b8fa3] hover:text-[#e2e8f0] transition-colors" title="Sair">
+          <button id="logout-btn" class="p-1.5 rounded hover:bg-[#35373c] text-[#b5bac1] hover:text-[#f2f3f5] transition-colors" title="Sair">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 116 0v1"/></svg>
           </button>
-          <button id="settings-btn" class="p-1.5 rounded-xl hover:bg-[rgba(255,255,255,0.04)] text-[#7b8fa3] hover:text-[#e2e8f0] transition-colors" title="Configurações">
+          <button id="settings-btn" class="p-1.5 rounded hover:bg-[#35373c] text-[#b5bac1] hover:text-[#f2f3f5] transition-colors" title="Configurações">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
           </button>
         </div>
@@ -938,17 +859,17 @@
     <!-- Main Content -->
     <div class="flex-1 flex flex-col">
       <!-- Channel Header -->
-      <div class="h-14 px-4 flex items-center border-b border-[rgba(255,255,255,0.06)] shadow-sm flex-shrink-0" style="background:rgba(13,31,45,0.5);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);">
-        <span class="text-[#7b8fa3] mr-2 text-xl">#</span>
-        <span class="text-white font-semibold" id="current-channel-name">geral</span>
-        <div class="w-px h-6 bg-[rgba(255,255,255,0.06)] mx-4"></div>
-        <span class="text-[#7b8fa3] text-sm" id="channel-topic">Selecione um canal para comecar a conversar</span>
+      <div class="h-12 px-4 flex items-center border-b border-[#1f2023] shadow-sm flex-shrink-0" style="background:#313338;">
+        <span class="text-[#80848e] mr-2 text-xl">#</span>
+        <span class="text-[#f2f3f5] font-semibold" id="current-channel-name">geral</span>
+        <div class="w-px h-6 bg-[#3f4147] mx-4"></div>
+        <span class="text-[#949ba4] text-sm" id="channel-topic">Selecione um canal para comecar a conversar</span>
       </div>
 
       <div class="flex-1 flex overflow-hidden relative">
         <div class="flex-1 flex flex-col min-w-0">
           <!-- Voice Participants Grid -->
-          <div id="voice-grid-container" class="hidden border-b border-[rgba(255,255,255,0.06)] overflow-y-auto p-4" style="max-height:200px;background:rgba(13,31,45,0.4);">
+          <div id="voice-grid-container" class="hidden border-b border-[#1f2023] overflow-y-auto p-4" style="max-height:200px;background:#2b2d31;">
             <div id="voice-participants-grid" class="grid gap-3 auto-rows-min" style="grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));"></div>
           </div>
 
@@ -956,19 +877,19 @@
           <div id="messages-container" class="flex-1 overflow-y-auto px-6 py-4"></div>
 
           <!-- Typing Indicator -->
-          <div id="typing-indicator" class="hidden px-4 py-1 text-sm text-[#7b8fa3]">
-            <span class="font-medium text-[#e2e8f0]" id="typing-user"></span> esta digitando
+          <div id="typing-indicator" class="hidden px-4 py-1 text-sm text-[#949ba4]">
+            <span class="font-medium text-[#f2f3f5]" id="typing-user"></span> esta digitando
             <span class="typing-dot inline-block">.</span><span class="typing-dot inline-block">.</span><span class="typing-dot inline-block">.</span>
           </div>
 
           <!-- Reply Indicator -->
-          <div id="reply-indicator" class="hidden px-4 py-2 flex items-center justify-between" style="background:rgba(13,31,45,0.7);backdrop-filter:blur(8px);border-bottom:1px solid rgba(255,255,255,0.06);">
+          <div id="reply-indicator" class="hidden px-4 py-2 flex items-center justify-between" style="background:#2b2d31;border-bottom:1px solid #1f2023;">
             <div class="flex items-center gap-2 text-sm">
-              <svg class="w-4 h-4 text-[#00d4aa]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
-              <span class="text-[#7b8fa3]">Respondendo a</span>
+              <svg class="w-4 h-4 text-[#5865f2]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+              <span class="text-[#949ba4]">Respondendo a</span>
               <span class="text-white font-medium" id="reply-to-username"></span>
             </div>
-            <button id="cancel-reply-btn" class="text-[#7b8fa3] hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+            <button id="cancel-reply-btn" class="text-[#949ba4] hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
           </div>
 
           <!-- Message Input -->
@@ -989,16 +910,16 @@
               </div>
               <div class="emoji-grid" id="emoji-grid"></div>
             </div>
-            <div class="flex items-center rounded-2xl px-4 border border-[rgba(255,255,255,0.06)] message-input-wrapper">
-              <label id="upload-btn" class="text-[#7b8fa3] hover:text-white cursor-pointer mr-2 transition-colors">
+            <div class="flex items-center rounded-lg px-4 bg-[#383a40] message-input-wrapper">
+              <label id="upload-btn" class="text-[#b5bac1] hover:text-[#f2f3f5] cursor-pointer mr-2 transition-colors">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                 <input type="file" id="file-input" class="hidden" accept="image/*,video/*,.pdf,.txt,.zip" />
               </label>
-              <input id="message-input" type="text" placeholder="Selecione um canal para enviar mensagem" maxlength="2000" class="flex-1 bg-transparent py-3 text-white outline-none placeholder-[#4a6274]" autocomplete="off" disabled />
-              <button id="emoji-btn" class="text-[#7b8fa3] hover:text-white ml-1 transition-colors" title="Emoji">
+              <input id="message-input" type="text" placeholder="Selecione um canal para enviar mensagem" maxlength="2000" class="flex-1 bg-transparent py-2.5 text-[#f2f3f5] outline-none placeholder-[#6d6f78]" autocomplete="off" disabled />
+              <button id="emoji-btn" class="text-[#b5bac1] hover:text-[#f2f3f5] ml-1 transition-colors" title="Emoji">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </button>
-              <button id="send-btn" class="text-[#7b8fa3] hover:text-white ml-2 transition-colors" disabled>
+              <button id="send-btn" class="text-[#b5bac1] hover:text-[#f2f3f5] ml-2 transition-colors" disabled>
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
               </button>
             </div>
@@ -1009,27 +930,27 @@
         <div id="members-panel">
           <div class="p-3">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide" id="members-panel-title">Membros</h3>
-              <button id="toggle-members-btn" class="text-[#4a6274] hover:text-[#e2e8f0]" title="Ocultar Membros">
+              <h3 class="text-[11px] font-semibold text-[#949ba4] uppercase tracking-wide" id="members-panel-title">Membros</h3>
+              <button id="toggle-members-btn" class="text-[#949ba4] hover:text-[#f2f3f5]" title="Ocultar Membros">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
               </button>
             </div>
             <div id="members-online-section" class="mb-3">
               <div class="flex items-center gap-1 mb-1 px-1">
-                <span class="text-[11px] font-semibold text-[#4a6274] uppercase">Online</span>
-                <span class="text-[11px] text-[#4a6274]" id="members-online-count">0</span>
+                <span class="text-[11px] font-semibold text-[#949ba4] uppercase">Online</span>
+                <span class="text-[11px] text-[#949ba4]" id="members-online-count">0</span>
               </div>
               <div id="members-online-list" class="space-y-0.5"></div>
             </div>
             <div id="members-offline-section">
               <div class="flex items-center gap-1 mb-1 px-1">
-                <span class="text-[11px] font-semibold text-[#4a6274] uppercase">Offline</span>
-                <span class="text-[11px] text-[#4a6274]" id="members-offline-count">0</span>
+                <span class="text-[11px] font-semibold text-[#949ba4] uppercase">Offline</span>
+                <span class="text-[11px] text-[#949ba4]" id="members-offline-count">0</span>
               </div>
               <div id="members-offline-list" class="space-y-0.5"></div>
             </div>
-            <div id="invite-section" class="hidden mt-3 pt-3 border-t border-[rgba(255,255,255,0.06)]">
-              <button id="show-invite-btn" class="w-full py-2 text-white text-sm rounded-xl transition-all flex items-center justify-center gap-2" style="background:linear-gradient(135deg,rgba(0,212,170,0.15),rgba(0,212,170,0.08));border:1px solid rgba(0,212,170,0.25);">
+            <div id="invite-section" class="hidden mt-3 pt-3 border-t border-[#3f4147]">
+              <button id="show-invite-btn" class="w-full py-2 text-white text-sm rounded transition-all flex items-center justify-center gap-2" style="background:#5865f2;">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
                 Convidar Amigos
               </button>
@@ -1037,25 +958,25 @@
             <!-- Files Section -->
             <div class="files-section">
               <div class="flex items-center justify-between px-1 mb-2">
-                <span class="text-[11px] font-semibold text-[#4a6274] uppercase">Project Files</span>
+                <span class="text-[11px] font-semibold text-[#949ba4] uppercase">Project Files</span>
               </div>
               <div class="file-item">
                 <div class="file-icon">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
                 </div>
-                <span class="text-sm text-[#e2e8f0] truncate">Design_Specs.pdf</span>
+                <span class="text-sm text-[#f2f3f5] truncate">Design_Specs.pdf</span>
               </div>
               <div class="file-item">
-                <div class="file-icon" style="background:rgba(14,165,233,0.1);color:#0ea5e9;">
+                <div class="file-icon" style="background:rgba(35,165,90,0.1);color:#23a55a;">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 </div>
-                <span class="text-sm text-[#e2e8f0] truncate">Asset_Kit.png</span>
+                <span class="text-sm text-[#f2f3f5] truncate">Asset_Kit.png</span>
               </div>
               <div class="file-item">
-                <div class="file-icon" style="background:rgba(168,85,247,0.1);color:#a855f7;">
+                <div class="file-icon" style="background:rgba(88,101,242,0.1);color:#5865f2;">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
                 </div>
-                <span class="text-sm text-[#e2e8f0] truncate">Figma_Link</span>
+                <span class="text-sm text-[#f2f3f5] truncate">Figma_Link</span>
               </div>
             </div>
           </div>
@@ -1066,37 +987,37 @@
 
   <!-- ═══ MODALS ══════════════════════════════════════════════════════════════ -->
   <div id="create-server-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-    <div class="rounded-2xl shadow-2xl w-[440px] border border-[rgba(255,255,255,0.06)]" style="background:rgba(13,31,45,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(0,212,170,0.05);">
+    <div class="rounded-lg shadow-2xl w-[440px]" style="background:#313338;">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Criar Servidor</h2><button id="close-create-modal" class="text-[#7b8fa3] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <p class="text-[#7b8fa3] text-sm mb-4">Seu servidor sera onde voce e seus amigos interagem.</p>
-        <div id="create-server-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl mb-4 text-sm"></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Nome do Servidor</label><input id="server-name-input" type="text" maxlength="50" placeholder="Ex: Meu Servidor" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]" /></div>
-        <button id="create-server-btn" class="w-full py-2.5 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5" style="background:linear-gradient(135deg,#00d4aa,#0ea5e9);box-shadow:0 4px 12px rgba(0,212,170,0.3);">Criar</button>
+        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Criar Servidor</h2><button id="close-create-modal" class="text-[#949ba4] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <p class="text-[#949ba4] text-sm mb-4">Seu servidor sera onde voce e seus amigos interagem.</p>
+        <div id="create-server-error" class="hidden bg-[#ed4245]/20 border border-[#ed4245] text-[#ed4245] px-4 py-2 rounded mb-4 text-sm"></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Nome do Servidor</label><input id="server-name-input" type="text" maxlength="50" placeholder="Ex: Meu Servidor" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none" /></div>
+        <button id="create-server-btn" class="w-full py-2.5 text-white font-semibold rounded transition-all" style="background:#5865f2;">Criar</button>
       </div>
     </div>
   </div>
 
   <div id="join-server-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-    <div class="rounded-2xl shadow-2xl w-[440px] border border-[rgba(255,255,255,0.06)]" style="background:rgba(13,31,45,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(0,212,170,0.05);">
+    <div class="rounded-lg shadow-2xl w-[440px]" style="background:#313338;">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Entrar num Servidor</h2><button id="close-join-modal" class="text-[#7b8fa3] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <p class="text-[#7b8fa3] text-sm mb-4">Cole o codigo de convite abaixo.</p>
-        <div id="join-server-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl mb-4 text-sm"></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Codigo de Convite</label><input id="invite-code-input" type="text" maxlength="8" placeholder="Ex: AbCdEfGh" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm font-mono border border-[rgba(255,255,255,0.06)]" /></div>
-        <button id="join-server-btn" class="w-full py-2.5 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5" style="background:linear-gradient(135deg,#22c55e,#1a8045);box-shadow:0 4px 12px rgba(35,165,90,0.3);">Entrar no Servidor</button>
+        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Entrar num Servidor</h2><button id="close-join-modal" class="text-[#949ba4] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <p class="text-[#949ba4] text-sm mb-4">Cole o codigo de convite abaixo.</p>
+        <div id="join-server-error" class="hidden bg-[#ed4245]/20 border border-[#ed4245] text-[#ed4245] px-4 py-2 rounded mb-4 text-sm"></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Codigo de Convite</label><input id="invite-code-input" type="text" maxlength="8" placeholder="Ex: AbCdEfGh" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm font-mono border-none" /></div>
+        <button id="join-server-btn" class="w-full py-2.5 text-white font-semibold rounded transition-all" style="background:#23a55a;">Entrar no Servidor</button>
       </div>
     </div>
   </div>
 
   <div id="invite-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-    <div class="rounded-2xl shadow-2xl w-[440px] border border-[rgba(255,255,255,0.06)]" style="background:rgba(13,31,45,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(0,212,170,0.05);">
+    <div class="rounded-lg shadow-2xl w-[440px]" style="background:#313338;">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Convidar Amigos</h2><button id="close-invite-modal" class="text-[#7b8fa3] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <p class="text-[#7b8fa3] text-sm mb-4">Envie este codigo para seus amigos.</p>
-        <div class="flex items-center rounded-xl px-4 py-3 mb-4 border border-[rgba(255,255,255,0.06)]" style="background:rgba(13,31,45,0.6);">
+        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Convidar Amigos</h2><button id="close-invite-modal" class="text-[#949ba4] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <p class="text-[#949ba4] text-sm mb-4">Envie este codigo para seus amigos.</p>
+        <div class="flex items-center rounded px-4 py-3 mb-4" style="background:#1e1f22;">
           <span id="invite-code-display" class="text-white font-mono text-lg flex-1 select-all"></span>
-          <button id="copy-invite-btn" class="ml-2 px-3 py-1 text-white text-sm rounded-lg transition-colors" style="background:linear-gradient(135deg,#00d4aa,#0ea5e9);">Copiar</button>
+          <button id="copy-invite-btn" class="ml-2 px-3 py-1 text-white text-sm rounded transition-colors" style="background:#5865f2;">Copiar</button>
         </div>
         <p id="copy-success" class="hidden text-green-400 text-sm text-center">Codigo copiado!</p>
       </div>
@@ -1104,17 +1025,17 @@
   </div>
 
   <div id="create-channel-modal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-    <div class="rounded-2xl shadow-2xl w-[440px] border border-[rgba(255,255,255,0.06)]" style="background:rgba(13,31,45,0.8);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 25px 60px rgba(0,0,0,0.5),0 0 40px rgba(0,212,170,0.05);">
+    <div class="rounded-lg shadow-2xl w-[440px]" style="background:#313338;">
       <div class="p-6">
-        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Criar Canal</h2><button id="close-create-channel-modal" class="text-[#7b8fa3] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
-        <div id="create-channel-error" class="hidden bg-red-500/20 border border-red-500 text-red-400 px-4 py-2 rounded-xl mb-4 text-sm"></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Nome do Canal</label><input id="channel-name-input" type="text" maxlength="30" placeholder="Ex: musicas" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]" /></div>
-        <div class="mb-4"><label class="block text-xs font-semibold text-[#7b8fa3] uppercase tracking-wide mb-2">Tipo</label>
-          <select id="channel-type-input" class="w-full px-3 py-2.5 bg-[rgba(13,31,45,0.6)] text-white rounded-xl outline-none focus:ring-2 focus:ring-[#00d4aa] text-sm border border-[rgba(255,255,255,0.06)]">
+        <div class="flex items-center justify-between mb-4"><h2 class="text-xl font-bold text-white">Criar Canal</h2><button id="close-create-channel-modal" class="text-[#949ba4] hover:text-white"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button></div>
+        <div id="create-channel-error" class="hidden bg-[#ed4245]/20 border border-[#ed4245] text-[#ed4245] px-4 py-2 rounded mb-4 text-sm"></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Nome do Canal</label><input id="channel-name-input" type="text" maxlength="30" placeholder="Ex: musicas" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none" /></div>
+        <div class="mb-4"><label class="block text-xs font-semibold text-[#949ba4] uppercase tracking-wide mb-2">Tipo</label>
+          <select id="channel-type-input" class="w-full px-3 py-2.5 bg-[#1e1f22] text-[#f2f3f5] rounded outline-none focus:ring-2 focus:ring-[#5865f2] text-sm border-none">
             <option value="text">Texto</option><option value="voice">Voz</option>
           </select>
         </div>
-        <button id="create-channel-btn" class="w-full py-2.5 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5" style="background:linear-gradient(135deg,#00d4aa,#0ea5e9);box-shadow:0 4px 12px rgba(0,212,170,0.3);">Criar Canal</button>
+        <button id="create-channel-btn" class="w-full py-2.5 text-white font-semibold rounded transition-all" style="background:#5865f2;">Criar Canal</button>
       </div>
     </div>
   </div>
@@ -1160,42 +1081,42 @@
         <!-- ═══ TAB: CONTA ════════════════════════════════════════════════════ -->
         <div class="settings-tab-content" id="tab-account" style="display:none;">
           <h2>Minha Conta</h2>
-          <div style="background:rgba(13,31,45,0.4);border-radius:8px;padding:20px;margin-bottom:24px;border:1px solid rgba(255,255,255,0.06);">
+          <div style="background:#1e1f22;border-radius:8px;padding:20px;margin-bottom:24px;">
             <div style="display:flex;align-items:center;gap:20px;">
               <div style="position:relative;">
-                <img id="tab-account-avatar" src="" class="w-20 h-20 rounded-full" alt="" style="border: 2px solid rgba(0,212,170,0.3);" />
-                <button id="change-avatar-btn" style="position:absolute;bottom:0;right:0;background:#00d4aa;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.4);" title="Alterar Avatar">
+                <img id="tab-account-avatar" src="" class="w-20 h-20 rounded-full" alt="" />
+                <button id="change-avatar-btn" style="position:absolute;bottom:0;right:0;background:#5865f2;border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;" title="Alterar Avatar">
                   <svg width="14" height="14" fill="none" stroke="#fff" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 </button>
               </div>
               <div>
                 <div style="color:#f2f3f5;font-size:20px;font-weight:600;" id="tab-account-display-name">Usuario</div>
-                <div style="color:#7b8fa3;font-size:14px;" id="tab-account-username">usuario</div>
+                <div style="color:#949ba4;font-size:14px;" id="tab-account-username">usuario</div>
               </div>
             </div>
           </div>
           <div class="setting-group">
             <h3>Informações da Conta</h3>
-            <div style="background:rgba(13,31,45,0.4);border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
-              <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">
-                <div><div class="setting-label">Nome de Usuário</div><div style="color:#e2e8f0;font-size:14px;" id="tab-account-username-val">Usuario</div></div>
-                <button style="padding:6px 16px;background:rgba(255,255,255,0.06);color:#e2e8f0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;font-size:13px;cursor:pointer;">Editar</button>
+            <div style="background:#1e1f22;border-radius:8px;overflow:hidden;">
+              <div style="padding:16px 20px;border-bottom:1px solid #3f4147;display:flex;justify-content:space-between;align-items:center;">
+                <div><div class="setting-label">Nome de Usuário</div><div style="color:#f2f3f5;font-size:14px;" id="tab-account-username-val">Usuario</div></div>
+                <button style="padding:6px 16px;background:#4e5058;color:#f2f3f5;border:none;border-radius:4px;font-size:13px;cursor:pointer;">Editar</button>
               </div>
-              <div style="padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">
-                <div><div class="setting-label">E-mail</div><div style="color:#e2e8f0;font-size:14px;" id="tab-account-email">usuario@email.com</div></div>
-                <button style="padding:6px 16px;background:rgba(255,255,255,0.06);color:#e2e8f0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;font-size:13px;cursor:pointer;">Editar</button>
+              <div style="padding:16px 20px;border-bottom:1px solid #3f4147;display:flex;justify-content:space-between;align-items:center;">
+                <div><div class="setting-label">E-mail</div><div style="color:#f2f3f5;font-size:14px;" id="tab-account-email">usuario@email.com</div></div>
+                <button style="padding:6px 16px;background:#4e5058;color:#f2f3f5;border:none;border-radius:4px;font-size:13px;cursor:pointer;">Editar</button>
               </div>
               <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center;">
-                <div><div class="setting-label">Senha</div><div style="color:#e2e8f0;font-size:14px;">••••••••</div></div>
-                <button style="padding:6px 16px;background:rgba(255,255,255,0.06);color:#e2e8f0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;font-size:13px;cursor:pointer;">Alterar Senha</button>
+                <div><div class="setting-label">Senha</div><div style="color:#f2f3f5;font-size:14px;">••••••••</div></div>
+                <button style="padding:6px 16px;background:#4e5058;color:#f2f3f5;border:none;border-radius:4px;font-size:13px;cursor:pointer;">Alterar Senha</button>
               </div>
             </div>
           </div>
           <div class="setting-group">
             <h3>Foto de Perfil</h3>
             <div style="display:flex;gap:12px;align-items:center;">
-              <button id="change-avatar-settings-btn" style="padding:8px 16px;background:linear-gradient(135deg,#00d4aa,#0ea5e9);color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;box-shadow:0 4px 12px rgba(0,212,170,0.3);">Trocar Avatar</button>
-              <button id="remove-avatar-btn" style="padding:8px 16px;background:#ed4245;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;">Remover Avatar</button>
+              <button id="change-avatar-settings-btn" style="padding:8px 16px;background:#5865f2;color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer;">Trocar Avatar</button>
+              <button id="remove-avatar-btn" style="padding:8px 16px;background:#ed4245;color:#fff;border:none;border-radius:4px;font-size:14px;cursor:pointer;">Remover Avatar</button>
             </div>
           </div>
           </div>
@@ -1207,15 +1128,15 @@
           <div class="setting-group">
             <h3>Privacidade e Segurança</h3>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Permitir Mensagens Diretas</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Membros da comunidade podem enviar mensagens diretas para você.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Permitir Mensagens Diretas</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Membros da comunidade podem enviar mensagens diretas para você.</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Filtrar Mensagens Ofensivas</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Filtrar conteúdo ofensivo nas mensagens recebidas.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Filtrar Mensagens Ofensivas</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Filtrar conteúdo ofensivo nas mensagens recebidas.</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Modo Não Perturbe</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Suprimir todas as notificações por push.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Modo Não Perturbe</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Suprimir todas as notificações por push.</div></div>
               <label class="toggle-switch"><input type="checkbox" /><span class="toggle-slider"></span></label>
             </div>
           </div>
@@ -1230,10 +1151,10 @@
         <div class="settings-tab-content" id="tab-family" style="display:none;">
           <h2>Família</h2>
           <div class="setting-group">
-            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;border:1px solid rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);">
-              <svg width="48" height="48" fill="none" stroke="#00d4aa" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;">
+              <svg width="48" height="48" fill="none" stroke="#5865f2" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               <div style="color:#f2f3f5;font-size:16px;font-weight:600;margin-bottom:8px;">Gerenciamento Familiar</div>
-              <div style="color:#7b8fa3;font-size:14px;max-width:400px;margin:0 auto;">Configure supervisão parental e gerencie as contas dos membros da família.</div>
+              <div style="color:#949ba4;font-size:14px;max-width:400px;margin:0 auto;">Configure supervisão parental e gerencie as contas dos membros da família.</div>
             </div>
           </div>
         </div>
@@ -1242,14 +1163,14 @@
         <div class="settings-tab-content" id="tab-connections" style="display:none;">
           <h2>Conexões</h2>
           <div class="setting-group">
-            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;border:1px solid rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);">
-              <svg width="48" height="48" fill="none" stroke="#00d4aa" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;">
+              <svg width="48" height="48" fill="none" stroke="#5865f2" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
               <div style="color:#f2f3f5;font-size:16px;font-weight:600;margin-bottom:8px;">Conectar Contas</div>
-              <div style="color:#7b8fa3;font-size:14px;max-width:400px;margin:0 auto 16px;">Conecte suas contas de redes sociais e serviços.</div>
+              <div style="color:#949ba4;font-size:14px;max-width:400px;margin:0 auto 16px;">Conecte suas contas de redes sociais e serviços.</div>
               <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
-                <button style="padding:8px 20px;background:#00d4aa;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">Spotify</button>
-                <button style="padding:8px 20px;background:#00d4aa;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">YouTube</button>
-                <button style="padding:8px 20px;background:#00d4aa;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">Twitch</button>
+                <button style="padding:8px 20px;background:#5865f2;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">Spotify</button>
+                <button style="padding:8px 20px;background:#5865f2;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">YouTube</button>
+                <button style="padding:8px 20px;background:#5865f2;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;">Twitch</button>
               </div>
             </div>
           </div>
@@ -1259,11 +1180,11 @@
         <div class="settings-tab-content" id="tab-nitro" style="display:none;">
           <h2>Discord Nitro</h2>
           <div class="setting-group">
-            <div style="background:linear-gradient(135deg,#00d4aa,#0ea5e9);border-radius:8px;padding:32px;text-align:center;">
+            <div style="background:#5865f2;border-radius:8px;padding:32px;text-align:center;">
               <svg width="48" height="48" fill="none" stroke="#fff" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
               <div style="color:#fff;font-size:24px;font-weight:700;margin-bottom:8px;">Obtenha Nitro</div>
               <div style="color:rgba(255,255,255,0.8);font-size:14px;margin-bottom:20px;">Emojis personalizados, streaming em HD, e muito mais!</div>
-              <button style="padding:10px 32px;background:#fff;color:#00d4aa;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;">Assinar Nitro</button>
+              <button style="padding:10px 32px;background:#fff;color:#5865f2;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;">Assinar Nitro</button>
             </div>
           </div>
         </div>
@@ -1272,10 +1193,10 @@
         <div class="settings-tab-content" id="tab-boost" style="display:none;">
           <h2>Impulsionar Servidor</h2>
           <div class="setting-group">
-            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;border:1px solid rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);">
-              <svg width="48" height="48" fill="none" stroke="#0ea5e9" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;">
+              <svg width="48" height="48" fill="none" stroke="#5865f2" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
               <div style="color:#f2f3f5;font-size:16px;font-weight:600;margin-bottom:8px;">Impulsione seus Servidores</div>
-              <div style="color:#7b8fa3;font-size:14px;max-width:400px;margin:0 auto;">Compartilhe benefícios incríveis com todos os membros do servidor.</div>
+              <div style="color:#949ba4;font-size:14px;max-width:400px;margin:0 auto;">Compartilhe benefícios incríveis com todos os membros do servidor.</div>
             </div>
           </div>
         </div>
@@ -1284,10 +1205,10 @@
         <div class="settings-tab-content" id="tab-subscriptions" style="display:none;">
           <h2>Assinaturas</h2>
           <div class="setting-group">
-            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;border:1px solid rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);">
-              <svg width="48" height="48" fill="none" stroke="#00d4aa" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;">
+              <svg width="48" height="48" fill="none" stroke="#5865f2" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
               <div style="color:#f2f3f5;font-size:16px;font-weight:600;margin-bottom:8px;">Nenhuma Assinatura Ativa</div>
-              <div style="color:#7b8fa3;font-size:14px;">Gerencie suas assinaturas e pagamentos aqui.</div>
+              <div style="color:#949ba4;font-size:14px;">Gerencie suas assinaturas e pagamentos aqui.</div>
             </div>
           </div>
         </div>
@@ -1334,12 +1255,12 @@
           <div class="setting-group">
             <div class="setting-label">Sensibilidade de Captação de Voz</div>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Ajustar Automaticamente</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Ajusta a sensibilidade com base no seu ambiente.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Ajustar Automaticamente</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Ajusta a sensibilidade com base no seu ambiente.</div></div>
               <label class="toggle-switch"><input type="checkbox" id="settings-auto-sensitivity" checked /><span class="toggle-slider"></span></label>
             </div>
             <div id="settings-sensitivity-bar-wrap" style="margin-top:12px;opacity:0.4;pointer-events:none;">
               <div class="sensitivity-bar"><div id="settings-sensitivity-indicator" class="sensitivity-indicator" style="left:50%"></div></div>
-              <div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="color:#7b8fa3;font-size:10px;">Silencioso</span><span style="color:#7b8fa3;font-size:10px;">Alto</span></div>
+              <div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="color:#949ba4;font-size:10px;">Silencioso</span><span style="color:#949ba4;font-size:10px;">Alto</span></div>
             </div>
           </div>
         </div>
@@ -1350,15 +1271,15 @@
           <div class="setting-group">
             <h3>Processamento de Mensagens</h3>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Emojis como Texto</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Exibir emojis digitados como texto nos canais.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Emojis como Texto</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Exibir emojis digitados como texto nos canais.</div></div>
               <label class="toggle-switch"><input type="checkbox" /><span class="toggle-slider"></span></label>
             </div>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Pré-visualização de Links</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Mostrar visualização de links postados nas mensagens.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Pré-visualização de Links</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Mostrar visualização de links postados nas mensagens.</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Auto-play de Mídia</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Reproduzir automaticamente vídeos e áudios.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Auto-play de Mídia</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Reproduzir automaticamente vídeos e áudios.</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
           </div>
@@ -1370,15 +1291,15 @@
           <div class="setting-group">
             <h3>Notificações</h3>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Notificações por Push</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Receber notificações no navegador.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Notificações por Push</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Receber notificações no navegador.</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Som de Notificação</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Reproduzir som ao receber uma mensagem.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Som de Notificação</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Reproduzir som ao receber uma mensagem.</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Indicador de Mensagem Não Lida</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Mostrar indicador para canais com mensagens não lidas.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Indicador de Mensagem Não Lida</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Mostrar indicador para canais com mensagens não lidas.</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
           </div>
@@ -1388,22 +1309,22 @@
         <div class="settings-tab-content" id="tab-keybinds" style="display:none;">
           <h2>Atalhos de Teclado</h2>
           <div class="setting-group">
-            <div style="background:rgba(13,31,45,0.4);border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.06);">
-              <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#e2e8f0;font-size:14px;">Mostrar/Ocultar Chat de Voz</span>
-                <kbd style="padding:4px 8px;background:rgba(255,255,255,0.06);color:#e2e8f0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;font-size:12px;font-family:monospace;">Ctrl + Shift + C</kbd>
+            <div style="background:#1e1f22;border-radius:8px;overflow:hidden;">
+              <div style="padding:14px 20px;border-bottom:1px solid #3f4147;display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:#f2f3f5;font-size:14px;">Mostrar/Ocultar Chat de Voz</span>
+                <kbd style="padding:4px 8px;background:#4e5058;color:#f2f3f5;border:none;border-radius:4px;font-size:12px;font-family:monospace;">Ctrl + Shift + C</kbd>
               </div>
-              <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#e2e8f0;font-size:14px;">Desmutar Microfone</span>
-                <kbd style="padding:4px 8px;background:rgba(255,255,255,0.06);color:#e2e8f0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;font-size:12px;font-family:monospace;">Ctrl + Shift + M</kbd>
+              <div style="padding:14px 20px;border-bottom:1px solid #3f4147;display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:#f2f3f5;font-size:14px;">Desmutar Microfone</span>
+                <kbd style="padding:4px 8px;background:#4e5058;color:#f2f3f5;border:none;border-radius:4px;font-size:12px;font-family:monospace;">Ctrl + Shift + M</kbd>
               </div>
-              <div style="padding:14px 20px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#e2e8f0;font-size:14px;">Desconectar do Canal de Voz</span>
-                <kbd style="padding:4px 8px;background:rgba(255,255,255,0.06);color:#e2e8f0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;font-size:12px;font-family:monospace;">Ctrl + Shift + D</kbd>
+              <div style="padding:14px 20px;border-bottom:1px solid #3f4147;display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:#f2f3f5;font-size:14px;">Desconectar do Canal de Voz</span>
+                <kbd style="padding:4px 8px;background:#4e5058;color:#f2f3f5;border:none;border-radius:4px;font-size:12px;font-family:monospace;">Ctrl + Shift + D</kbd>
               </div>
               <div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
-                <span style="color:#e2e8f0;font-size:14px;">Capturar Tela</span>
-                <kbd style="padding:4px 8px;background:rgba(255,255,255,0.06);color:#e2e8f0;border:1px solid rgba(255,255,255,0.06);border-radius:4px;font-size:12px;font-family:monospace;">Ctrl + Shift + S</kbd>
+                <span style="color:#f2f3f5;font-size:14px;">Capturar Tela</span>
+                <kbd style="padding:4px 8px;background:#4e5058;color:#f2f3f5;border:none;border-radius:4px;font-size:12px;font-family:monospace;">Ctrl + Shift + S</kbd>
               </div>
             </div>
           </div>
@@ -1431,18 +1352,18 @@
           <h2>Modo Streamer</h2>
           <div class="setting-group">
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Ativar Modo Streamer</div><div style="color:#7b8fa3;font-size:12px;margin-top:2px;">Oculta informações privadas quando uma transmissão está ativa.</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Ativar Modo Streamer</div><div style="color:#949ba4;font-size:12px;margin-top:2px;">Oculta informações privadas quando uma transmissão está ativa.</div></div>
               <label class="toggle-switch"><input type="checkbox" /><span class="toggle-slider"></span></label>
             </div>
           </div>
           <div class="setting-group">
             <h3>Ocultar durante Transmissão</h3>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Ocultar Atividade Privada</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Ocultar Atividade Privada</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
             <div class="toggle-row">
-              <div><div style="color:#e2e8f0;font-size:14px;">Ocultar Detalhes do Servidor</div></div>
+              <div><div style="color:#f2f3f5;font-size:14px;">Ocultar Detalhes do Servidor</div></div>
               <label class="toggle-switch"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
             </div>
           </div>
@@ -1452,10 +1373,10 @@
         <div class="settings-tab-content" id="tab-changelog" style="display:none;">
           <h2>Novidades</h2>
           <div class="setting-group">
-            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;border:1px solid rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.06);">
-              <svg width="48" height="48" fill="none" stroke="#00d4aa" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;">
+              <svg width="48" height="48" fill="none" stroke="#5865f2" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
               <div style="color:#f2f3f5;font-size:16px;font-weight:600;margin-bottom:8px;">Nenhuma Novidade</div>
-              <div style="color:#7b8fa3;font-size:14px;">Volte mais tarde para ver as últimas atualizações!</div>
+              <div style="color:#949ba4;font-size:14px;">Volte mais tarde para ver as últimas atualizações!</div>
             </div>
           </div>
         </div>
@@ -1464,10 +1385,10 @@
         <div class="settings-tab-content" id="tab-whatshot" style="display:none;">
           <h2>O que há de novo</h2>
           <div class="setting-group">
-            <div style="background:rgba(13,31,45,0.4);border-radius:8px;padding:24px;text-align:center;border:1px solid rgba(255,255,255,0.06);">
-              <svg width="48" height="48" fill="none" stroke="#faa61a" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/></svg>
+            <div style="background:#1e1f22;border-radius:8px;padding:24px;text-align:center;">
+              <svg width="48" height="48" fill="none" stroke="#f0b232" viewBox="0 0 24 24" style="margin:0 auto 16px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/></svg>
               <div style="color:#f2f3f5;font-size:16px;font-weight:600;margin-bottom:8px;">Você está atualizado!</div>
-              <div style="color:#7b8fa3;font-size:14px;">Nenhuma atualização recente no momento.</div>
+              <div style="color:#949ba4;font-size:14px;">Nenhuma atualização recente no momento.</div>
             </div>
           </div>
         </div>
@@ -1477,9 +1398,9 @@
           <h2>Enviar Comentários</h2>
           <div class="setting-group">
             <div class="setting-label">Sua Opinião</div>
-            <textarea style="width:100%;min-height:120px;background:rgba(13,31,45,0.4);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;color:#e2e8f0;font-size:14px;resize:vertical;outline:none;" placeholder="Descreva seu feedback ou sugestão..."></textarea>
+            <textarea style="width:100%;min-height:120px;background:#1e1f22;border:none;border-radius:4px;padding:12px;color:#f2f3f5;font-size:14px;resize:vertical;outline:none;" placeholder="Descreva seu feedback ou sugestão..."></textarea>
             <div style="margin-top:12px;">
-              <button style="padding:8px 24px;background:#00d4aa;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;">Enviar</button>
+              <button style="padding:8px 24px;background:#5865f2;color:#fff;border:none;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;">Enviar</button>
             </div>
           </div>
         </div>
@@ -1780,7 +1701,7 @@
 
     function renderServerList() {
       serverList.innerHTML = '';
-      const colors = ['linear-gradient(135deg,#ef4444,#dc2626)', 'linear-gradient(135deg,#3b82f6,#2563eb)', 'linear-gradient(135deg,#22c55e,#16a34a)', 'linear-gradient(135deg,#eab308,#ca8a04)', 'linear-gradient(135deg,#a855f7,#9333ea)', 'linear-gradient(135deg,#ec4899,#db2777)', 'linear-gradient(135deg,#00d4aa,#0ea5e9)'];
+      const colors = ['#ed4245', '#3b82f6', '#23a55a', '#f0b232', '#a855f7', '#ec4899', '#5865f2'];
       userServers.forEach(s => {
         const ci = s.name.charCodeAt(0) % colors.length;
         const initials = s.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
@@ -1838,7 +1759,7 @@
       $('members-offline-count').textContent = offline.length;
 
       const roleLabels = { owner: 'Dono', admin: 'Admin', moderator: 'Mod' };
-      const roleColors = { owner: '#ed4245', admin: '#f0b232', moderator: '#23a559' };
+        const roleColors = { owner: '#ed4245', admin: '#f0b232', moderator: '#23a55a' };
 
       online.forEach(m => {
         const d = document.createElement('div');
@@ -1881,7 +1802,7 @@
         const catWrapper = document.createElement('div');
         const catHeader = document.createElement('div');
         catHeader.className = 'channel-category';
-        catHeader.innerHTML = `<svg class="cat-chevron w-3 h-3 text-[#4a6274]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg><span class="text-[11px] font-semibold text-[#4a6274] uppercase tracking-wide">Texto</span>`;
+        catHeader.innerHTML = `<svg class="cat-chevron w-3 h-3 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg><span class="text-[11px] font-semibold text-[#949ba4] uppercase tracking-wide">Texto</span>`;
         const itemsDiv = document.createElement('div');
         itemsDiv.className = 'channel-category-items';
         catHeader.addEventListener('click', () => { catHeader.classList.toggle('collapsed'); });
@@ -1889,7 +1810,7 @@
         catWrapper.appendChild(itemsDiv);
         textChannels.forEach(ch => {
           const d = document.createElement('div'); d.className = 'channel-item flex items-center px-2 py-1.5 rounded cursor-pointer'; d.setAttribute('data-channel-id', ch.id);
-          d.innerHTML = `<span class="text-[#4a6274] mr-1.5 text-lg">#</span><span class="text-[#e2e8f0] text-sm font-medium">${escapeHtml(ch.name)}</span>`;
+          d.innerHTML = `<span class="text-[#80848e] mr-1.5 text-lg">#</span><span class="text-[#949ba4] text-sm font-medium">${escapeHtml(ch.name)}</span>`;
           d.addEventListener('click', () => selectChannel(ch));
           itemsDiv.appendChild(d);
         });
@@ -1900,7 +1821,7 @@
         const catWrapper = document.createElement('div');
         const catHeader = document.createElement('div');
         catHeader.className = 'channel-category';
-        catHeader.innerHTML = `<svg class="cat-chevron w-3 h-3 text-[#4a6274]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg><span class="text-[11px] font-semibold text-[#4a6274] uppercase tracking-wide">Voz</span>`;
+        catHeader.innerHTML = `<svg class="cat-chevron w-3 h-3 text-[#949ba4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg><span class="text-[11px] font-semibold text-[#949ba4] uppercase tracking-wide">Voz</span>`;
         const itemsDiv = document.createElement('div');
         itemsDiv.className = 'channel-category-items';
         catHeader.addEventListener('click', () => { catHeader.classList.toggle('collapsed'); });
@@ -1910,8 +1831,8 @@
           const d = document.createElement('div'); d.className = 'channel-item flex flex-col px-2 py-1.5 rounded cursor-pointer'; d.setAttribute('data-channel-id', ch.id);
           d.innerHTML = `
             <div class="flex items-center">
-              <svg class="w-5 h-5 text-[#4a6274] mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-              <span class="text-[#e2e8f0] text-sm font-medium">${escapeHtml(ch.name)}</span>
+              <svg class="w-5 h-5 text-[#80848e] mr-1.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+              <span class="text-[#949ba4] text-sm font-medium">${escapeHtml(ch.name)}</span>
             </div>
             <div id="voice-users-${ch.id}" class="ml-7 mt-0.5 space-y-0.5"></div>`;
           d.addEventListener('click', () => {
@@ -1970,7 +1891,7 @@
         if (!reactionsContainer) return;
         reactionsContainer.innerHTML = '';
         for (const r of data.reactions) {
-          reactionsContainer.innerHTML += `<button class="reaction-btn text-xs bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.06)] rounded-full px-1.5 py-0.5 flex items-center gap-1" data-emoji="${r.emoji}" data-msg-id="${data.messageId}"><span>${r.emoji}</span><span class="text-[#e2e8f0]">${r.count}</span></button>`;
+          reactionsContainer.innerHTML += `<button class="reaction-btn text-xs bg-[#383a40] hover:bg-[#4e5058] rounded px-1.5 py-0.5 flex items-center gap-1" data-emoji="${r.emoji}" data-msg-id="${data.messageId}"><span>${r.emoji}</span><span class="text-[#f2f3f5]">${r.count}</span></button>`;
         }
       });
 
@@ -1985,7 +1906,7 @@
       socket.on('user-presence', (data) => {
         const statusDot = document.querySelector(`[data-user-id="${data.userId}"] .presence-dot`);
         if (statusDot) {
-          statusDot.className = `presence-dot w-2.5 h-2.5 rounded-full border-2 border-[#0a1628] absolute -bottom-0.5 -right-0.5 ${data.status === 'online' ? 'bg-green-500' : data.status === 'idle' ? 'bg-yellow-500' : data.status === 'dnd' ? 'bg-red-500' : 'bg-[#4a6274]'}`;
+          statusDot.className = `presence-dot w-2.5 h-2.5 rounded-full border-2 border-[#2b2d31] absolute -bottom-0.5 -right-0.5 ${data.status === 'online' ? 'bg-[#23a55a]' : data.status === 'idle' ? 'bg-[#f0b232]' : data.status === 'dnd' ? 'bg-[#ed4245]' : 'bg-[#80848e]'}`;
         }
       });
 
@@ -2479,7 +2400,7 @@
         d.id = `voice-user-${u.socketId}`;
         const muteIcon = u.isMuted ? '<svg class="w-3 h-3 text-red-400 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>' : '';
         const screenIcon = u.isScreenSharing ? '<span class="live-badge ml-1">AO VIVO</span>' : '';
-        d.innerHTML = `<img src="${getAvatarUrl(u.avatarSeed)}" class="w-5 h-5 rounded-full mr-1.5 flex-shrink-0" alt="" /><span class="text-xs text-[#e2e8f0] truncate flex-1">${escapeHtml(u.username)}</span>${screenIcon}${muteIcon}`;
+        d.innerHTML = `<img src="${getAvatarUrl(u.avatarSeed)}" class="w-5 h-5 rounded-full mr-1.5 flex-shrink-0" alt="" /><span class="text-xs text-[#f2f3f5] truncate flex-1">${escapeHtml(u.username)}</span>${screenIcon}${muteIcon}`;
         voiceUsersListEl.appendChild(d);
       });
     }
@@ -2493,7 +2414,7 @@
         d.className = 'flex items-center py-0.5';
         const liveBadge = u.isScreenSharing ? '<span class="live-badge ml-1">AO VIVO</span>' : '';
         const muteIcon = u.isMuted ? '<svg class="w-3 h-3 text-red-400 ml-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>' : '';
-        d.innerHTML = `<img src="${getAvatarUrl(u.avatarSeed)}" class="w-3.5 h-3.5 rounded-full mr-1" alt="" /><span class="text-[11px] text-[#7b8fa3] truncate">${escapeHtml(u.username)}</span>${liveBadge}${muteIcon}`;
+        d.innerHTML = `<img src="${getAvatarUrl(u.avatarSeed)}" class="w-3.5 h-3.5 rounded-full mr-1" alt="" /><span class="text-[11px] text-[#949ba4] truncate">${escapeHtml(u.username)}</span>${liveBadge}${muteIcon}`;
         c.appendChild(d);
       });
     }
@@ -2742,28 +2663,28 @@
 
       let replyHtml = '';
       if (message.reply_to && message.reply_content) {
-        replyHtml = `<div class="flex items-center gap-1 text-xs text-[#4a6274] mb-1 ml-12"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span class="text-[#7b8fa3]">${escapeHtml(message.reply_username || '')}</span><span class="truncate max-w-[200px]">${escapeHtml(message.reply_content || '')}</span></div>`;
+        replyHtml = `<div class="flex items-center gap-1 text-xs text-[#949ba4] mb-1 ml-12"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg><span class="text-[#949ba4]">${escapeHtml(message.reply_username || '')}</span><span class="truncate max-w-[200px]">${escapeHtml(message.reply_content || '')}</span></div>`;
       }
 
       let reactionsHtml = '';
       if (message.reactions && message.reactions.length > 0) {
         reactionsHtml = '<div class="flex flex-wrap gap-1 mt-1">';
         for (const r of message.reactions) {
-          reactionsHtml += `<button class="reaction-btn text-xs bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.1)] border border-[rgba(255,255,255,0.06)] rounded-full px-1.5 py-0.5 flex items-center gap-1" data-emoji="${r.emoji}" data-msg-id="${message.id}"><span>${r.emoji}</span><span class="text-[#e2e8f0]">${r.count}</span></button>`;
+          reactionsHtml += `<button class="reaction-btn text-xs bg-[#383a40] hover:bg-[#4e5058] rounded px-1.5 py-0.5 flex items-center gap-1" data-emoji="${r.emoji}" data-msg-id="${message.id}"><span>${r.emoji}</span><span class="text-[#f2f3f5]">${r.count}</span></button>`;
         }
-        reactionsHtml += `<button class="add-reaction-btn text-xs text-[#4a6274] hover:text-[#e2e8f0] rounded-full px-1.5 py-0.5 hidden group-hover:flex items-center" data-msg-id="${message.id}"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
+        reactionsHtml += `<button class="add-reaction-btn text-xs text-[#949ba4] hover:text-[#f2f3f5] rounded px-1.5 py-0.5 hidden group-hover:flex items-center" data-msg-id="${message.id}"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>`;
         reactionsHtml += '</div>';
       } else {
-        reactionsHtml = `<div class="flex gap-1 mt-1 hidden group-hover:flex">${QUICK_REACTIONS.map(e => `<button class="reaction-btn text-xs text-[#4a6274] hover:text-white hover:bg-[rgba(255,255,255,0.1)] rounded px-1" data-emoji="${e}" data-msg-id="${message.id}">${e}</button>`).join('')}</div>`;
+        reactionsHtml = `<div class="flex gap-1 mt-1 hidden group-hover:flex">${QUICK_REACTIONS.map(e => `<button class="reaction-btn text-xs text-[#949ba4] hover:text-white hover:bg-[#4e5058] rounded px-1" data-emoji="${e}" data-msg-id="${message.id}">${e}</button>`).join('')}</div>`;
       }
 
-      let editedHtml = message.edited ? '<span class="text-[10px] text-[#4a6274] ml-1">(editado)</span>' : '';
+      let editedHtml = message.edited ? '<span class="text-[10px] text-[#949ba4] ml-1">(editado)</span>' : '';
 
-      let actionsHtml = `<div class="absolute -top-3 right-2 hidden group-hover:flex bg-[rgba(13,31,45,0.9)] border border-[rgba(255,255,255,0.06)] rounded shadow-lg z-10">
-        <button class="reply-msg-btn p-1.5 hover:bg-[rgba(255,255,255,0.06)] rounded text-[#7b8fa3] hover:text-white" data-msg-id="${message.id}" data-username="${escapeHtml(message.username)}" data-content="${escapeHtml(content)}" title="Responder"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>
-        <button class="add-reaction-btn p-1.5 hover:bg-[rgba(255,255,255,0.06)] rounded text-[#7b8fa3] hover:text-white" data-msg-id="${message.id}" title="Reagir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
-        ${isOwn ? `<button class="edit-msg-btn p-1.5 hover:bg-[rgba(255,255,255,0.06)] rounded text-[#7b8fa3] hover:text-white" data-msg-id="${message.id}" data-content="${escapeHtml(message.content || '')}" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>` : ''}
-        ${isOwn || currentUserRole === 'owner' || currentUserRole === 'admin' || currentUserRole === 'moderator' ? `<button class="delete-msg-btn p-1.5 hover:bg-[rgba(255,255,255,0.06)] rounded text-[#7b8fa3] hover:text-red-400" data-msg-id="${message.id}" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
+      let actionsHtml = `<div class="absolute -top-3 right-2 hidden group-hover:flex bg-[#2b2d31] border border-[#1f2023] rounded shadow-lg z-10">
+        <button class="reply-msg-btn p-1.5 hover:bg-[#4e5058] rounded text-[#b5bac1] hover:text-white" data-msg-id="${message.id}" data-username="${escapeHtml(message.username)}" data-content="${escapeHtml(content)}" title="Responder"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>
+        <button class="add-reaction-btn p-1.5 hover:bg-[#4e5058] rounded text-[#b5bac1] hover:text-white" data-msg-id="${message.id}" title="Reagir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></button>
+        ${isOwn ? `<button class="edit-msg-btn p-1.5 hover:bg-[#4e5058] rounded text-[#b5bac1] hover:text-white" data-msg-id="${message.id}" data-content="${escapeHtml(message.content || '')}" title="Editar"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>` : ''}
+        ${isOwn || currentUserRole === 'owner' || currentUserRole === 'admin' || currentUserRole === 'moderator' ? `<button class="delete-msg-btn p-1.5 hover:bg-[#4e5058] rounded text-[#b5bac1] hover:text-[#ed4245]" data-msg-id="${message.id}" title="Excluir"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : ''}
       </div>`;
 
       d.innerHTML = `
@@ -2771,7 +2692,7 @@
         <div class="min-w-0 flex-1 relative">
           <div class="flex items-baseline gap-2">
             <span class="font-medium ${colors[ci]} cursor-pointer hover:underline">${escapeHtml(message.username || 'User')}</span>
-            <span class="text-xs text-[#4a6274]">${formatTime(message.created_at || message.timestamp)}</span>
+            <span class="text-xs text-[#949ba4]">${formatTime(message.created_at || message.timestamp)}</span>
             ${editedHtml}
           </div>
           ${replyHtml}
