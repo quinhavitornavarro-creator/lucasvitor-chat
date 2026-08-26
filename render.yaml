@@ -7,9 +7,19 @@ services:
     startCommand: node server.js
     healthCheckPath: /
     envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lucasvitor-db
+          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
       - key: NODE_ENV
         value: production
+
+databases:
+  - name: lucasvitor-db
+    plan: free
+    databaseName: lucasvitor
+    ipAllowList: []

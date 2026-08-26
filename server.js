@@ -10,7 +10,7 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
-const { initDatabase, getDb, saveDatabase } = require('./database');
+const { initDatabase, query, queryOne, run, runReturningId } = require('./database');
 
 const app = express();
 const server = http.createServer(app);
@@ -92,66 +92,36 @@ function generateInviteCode() {
   return code;
 }
 
-function queryOne(sql, params = []) {
-  const db = getDb();
-  const stmt = db.prepare(sql);
-  if (params.length) stmt.bind(params);
-  let row = null;
-  if (stmt.step()) row = stmt.getAsObject();
-  stmt.free();
-  return row;
+async function findByEmail(email) {
+  return queryOne('SELECT * FROM users WHERE email = $1', [email]);
 }
 
-function queryAll(sql, params = []) {
-  const db = getDb();
-  const stmt = db.prepare(sql);
-  if (params.length) stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free();
-  return rows;
+async function findByUsername(username) {
+  return queryOne('SELECT * FROM users WHERE username = $1', [username]);
 }
 
-function run(sql, params = []) {
-  const db = getDb();
-  db.run(sql, params);
-  saveDatabase();
+async function findById(id) {
+  return queryOne('SELECT * FROM users WHERE id = $1', [id]);
 }
 
-function findByEmail(email) {
-  return queryOne('SELECT * FROM users WHERE email = ?', [email]);
-}
-
-function findByUsername(username) {
-  return queryOne('SELECT * FROM users WHERE username = ?', [username]);
-}
-
-function findById(id) {
-  return queryOne('SELECT * FROM users WHERE id = ?', [id]);
-}
-
-function insertUser(username, email, passwordHash, avatarSeed) {
-  const db = getDb();
-  db.run('INSERT INTO users (username, email, password_hash, avatar_seed) VALUES (?, ?, ?, ?)',
-    [username, email, passwordHash, avatarSeed]);
-  const result = db.exec('SELECT last_insert_rowid() as id');
-  saveDatabase();
-  return result[0].values[0][0];
+async function insertUser(username, email, passwordHash, avatarSeed) {
+  const result = await runReturningId('INSERT INTO users (username, email, password_hash, avatar_seed) VALUES ($1, $2, $3, $4) RETURNING id', [username, email, passwordHash, avatarSeed]);
+  return result.id;
 }
 
 function generateAccessToken(userId) {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1h' });
 }
 
-function generateRefreshToken(userId) {
+async function generateRefreshToken(userId) {
   const token = jwt.sign({ userId, jti: uuidv4() }, JWT_REFRESH_SECRET, { expiresIn: '30d' });
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  run('INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?, ?, ?)', [userId, token, expiresAt]);
+  await run('INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)', [userId, token, expiresAt]);
   return token;
 }
 
-function removeRefreshToken(token) {
-  run('DELETE FROM refresh_tokens WHERE token = ?', [token]);
+async function removeRefreshToken(token) {
+  await run('DELETE FROM refresh_tokens WHERE token = $1', [token]);
 }
 
 function generateAvatarSeed() {
@@ -164,46 +134,46 @@ function sanitizeHtml(str) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-function getUserServers(userId) {
-  return queryAll(`
+async function getUserServers(userId) {
+  return query(`
     SELECT s.*, sm.joined_at, sm.role
     FROM servers s
     INNER JOIN server_members sm ON s.id = sm.server_id
-    WHERE sm.user_id = ?
+    WHERE sm.user_id = $1
     ORDER BY sm.joined_at ASC
   `, [userId]);
 }
 
-function getServerChannels(serverId) {
-  return queryAll('SELECT * FROM channels WHERE server_id = ? ORDER BY position ASC, created_at ASC', [serverId]);
+async function getServerChannels(serverId) {
+  return query('SELECT * FROM channels WHERE server_id = $1 ORDER BY position ASC, created_at ASC', [serverId]);
 }
 
-function getChannelMessages(channelId, limit = 50, before = null) {
+async function getChannelMessages(channelId, limit = 50, before = null) {
   if (before) {
-    return queryAll(`
+    return (await query(`
       SELECT m.*, u.username, u.avatar_seed
       FROM messages m
       INNER JOIN users u ON m.user_id = u.id
-      WHERE m.channel_id = ? AND m.id < ?
+      WHERE m.channel_id = $1 AND m.id < $2
       ORDER BY m.created_at DESC
-      LIMIT ?
-    `, [channelId, before, limit]).reverse();
+      LIMIT $3
+    `, [channelId, before, limit])).reverse();
   }
-  return queryAll(`
+  return (await query(`
     SELECT m.*, u.username, u.avatar_seed
     FROM messages m
     INNER JOIN users u ON m.user_id = u.id
-    WHERE m.channel_id = ?
+    WHERE m.channel_id = $1
     ORDER BY m.created_at DESC
-    LIMIT ?
-  `, [channelId, limit]).reverse();
+    LIMIT $2
+  `, [channelId, limit])).reverse();
 }
 
-function getReactionsForMessages(messageIds) {
+async function getReactionsForMessages(messageIds) {
   if (!messageIds.length) return {};
-  const placeholders = messageIds.map(() => '?').join(',');
-  const rows = queryAll(`
-    SELECT r.message_id, r.emoji, COUNT(*) as count, GROUP_CONCAT(u.username) as users
+  const placeholders = messageIds.map((_, i) => `$${i + 1}`).join(',');
+  const rows = await query(`
+    SELECT r.message_id, r.emoji, COUNT(*) as count, STRING_AGG(u.username, ',') as users
     FROM reactions r
     INNER JOIN users u ON r.user_id = u.id
     WHERE r.message_id IN (${placeholders})
@@ -212,43 +182,43 @@ function getReactionsForMessages(messageIds) {
   const reactions = {};
   for (const row of rows) {
     if (!reactions[row.message_id]) reactions[row.message_id] = [];
-    reactions[row.message_id].push({ emoji: row.emoji, count: row.count, users: (row.users || '').split(',') });
+    reactions[row.message_id].push({ emoji: row.emoji, count: parseInt(row.count), users: (row.users || '').split(',') });
   }
   return reactions;
 }
 
-function isServerMember(serverId, userId) {
-  return queryOne('SELECT * FROM server_members WHERE server_id = ? AND user_id = ?', [serverId, userId]);
+async function isServerMember(serverId, userId) {
+  return queryOne('SELECT * FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, userId]);
 }
 
-function getMemberRole(serverId, userId) {
-  const member = queryOne('SELECT role FROM server_members WHERE server_id = ? AND user_id = ?', [serverId, userId]);
+async function getMemberRole(serverId, userId) {
+  const member = await queryOne('SELECT role FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, userId]);
   return member ? member.role : null;
 }
 
-function isModerator(serverId, userId) {
-  const role = getMemberRole(serverId, userId);
+async function isModerator(serverId, userId) {
+  const role = await getMemberRole(serverId, userId);
   return role === 'owner' || role === 'admin' || role === 'moderator';
 }
 
-function extractMentions(content) {
+async function extractMentions(content) {
   const mentionRegex = /@(\w+)/g;
   const mentions = [];
   let match;
   while ((match = mentionRegex.exec(content)) !== null) {
-    const user = findByUsername(match[1]);
+    const user = await findByUsername(match[1]);
     if (user) mentions.push({ id: user.id, username: user.username });
   }
   return mentions;
 }
 
 // ─── Auth Middleware ─────────────────────────────────────────────────────────
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   try {
     const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ error: 'Não autenticado' });
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = findById(decoded.userId);
+    const user = await findById(decoded.userId);
     if (!user) return res.status(401).json({ error: 'Usuário não encontrado' });
     req.user = { id: user.id, username: user.username, email: user.email, avatarSeed: user.avatar_seed };
     next();
@@ -259,7 +229,7 @@ function authMiddleware(req, res, next) {
 
 // ─── REST API ────────────────────────────────────────────────────────────────
 
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
     if (!username || !email || !password)
@@ -271,23 +241,23 @@ app.post('/api/register', (req, res) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email))
       return res.status(400).json({ error: 'Email inválido' });
-    if (findByEmail(email))
+    if (await findByEmail(email))
       return res.status(400).json({ error: 'Email já cadastrado' });
-    if (findByUsername(username))
+    if (await findByUsername(username))
       return res.status(400).json({ error: 'Nome de usuário já existe' });
 
     const salt = bcrypt.genSaltSync(12);
     const passwordHash = bcrypt.hashSync(password, salt);
     const avatarSeed = generateAvatarSeed();
-    const userId = insertUser(sanitizeHtml(username), email, passwordHash, avatarSeed);
+    const userId = await insertUser(sanitizeHtml(username), email, passwordHash, avatarSeed);
 
-    const defaultServer = queryOne('SELECT id FROM servers LIMIT 1');
-    if (defaultServer && !isServerMember(defaultServer.id, userId)) {
-      run('INSERT INTO server_members (server_id, user_id) VALUES (?, ?)', [defaultServer.id, userId]);
+    const defaultServer = await queryOne('SELECT id FROM servers LIMIT 1');
+    if (defaultServer && !(await isServerMember(defaultServer.id, userId))) {
+      await run('INSERT INTO server_members (server_id, user_id) VALUES ($1, $2)', [defaultServer.id, userId]);
     }
 
     const accessToken = generateAccessToken(userId);
-    const refreshToken = generateRefreshToken(userId);
+    const refreshToken = await generateRefreshToken(userId);
     res.cookie('token', accessToken, { httpOnly: true, maxAge: 60 * 60 * 1000, sameSite: 'lax' });
     res.cookie('refreshToken', refreshToken, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
     res.json({ success: true, user: { id: userId, username, email, avatarSeed }, token: accessToken });
@@ -297,17 +267,17 @@ app.post('/api/register', (req, res) => {
   }
 });
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ error: 'Email e senha são obrigatórios' });
-    const user = findByEmail(email);
+    const user = await findByEmail(email);
     if (!user || !bcrypt.compareSync(password, user.password_hash))
       return res.status(401).json({ error: 'Email ou senha inválidos' });
 
     const accessToken = generateAccessToken(user.id);
-    const refreshToken = generateRefreshToken(user.id);
+    const refreshToken = await generateRefreshToken(user.id);
     res.cookie('token', accessToken, { httpOnly: true, maxAge: 60 * 60 * 1000, sameSite: 'lax' });
     res.cookie('refreshToken', refreshToken, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
     res.json({
@@ -321,17 +291,17 @@ app.post('/api/login', (req, res) => {
   }
 });
 
-app.post('/api/refresh', (req, res) => {
+app.post('/api/refresh', async (req, res) => {
   try {
     const { refreshToken } = req.body;
     if (!refreshToken) return res.status(400).json({ error: 'Refresh token necessário' });
     const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-    const stored = queryOne('SELECT * FROM refresh_tokens WHERE token = ? AND user_id = ?', [refreshToken, decoded.userId]);
+    const stored = await queryOne('SELECT * FROM refresh_tokens WHERE token = $1 AND user_id = $2', [refreshToken, decoded.userId]);
     if (!stored) return res.status(401).json({ error: 'Refresh token inválido' });
 
-    removeRefreshToken(refreshToken);
+    await removeRefreshToken(refreshToken);
     const newAccessToken = generateAccessToken(decoded.userId);
-    const newRefreshToken = generateRefreshToken(decoded.userId);
+    const newRefreshToken = await generateRefreshToken(decoded.userId);
     res.cookie('token', newAccessToken, { httpOnly: true, maxAge: 60 * 60 * 1000, sameSite: 'lax' });
     res.cookie('refreshToken', newRefreshToken, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
     res.json({ success: true, token: newAccessToken });
@@ -340,9 +310,9 @@ app.post('/api/refresh', (req, res) => {
   }
 });
 
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', async (req, res) => {
   const { refreshToken } = req.body;
-  if (refreshToken) removeRefreshToken(refreshToken);
+  if (refreshToken) await removeRefreshToken(refreshToken);
   res.clearCookie('token');
   res.clearCookie('refreshToken');
   res.json({ success: true });
@@ -352,42 +322,43 @@ app.get('/api/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });
 });
 
-app.get('/api/servers', authMiddleware, (req, res) => {
+app.get('/api/servers', authMiddleware, async (req, res) => {
   try {
-    const servers = getUserServers(req.user.id);
-    const serversWithChannels = servers.map(s => ({
-      id: s.id, name: s.name, iconUrl: s.icon_url, role: s.role,
-      inviteCode: s.invite_code, ownerId: s.owner_id,
-      channels: getServerChannels(s.id)
-    }));
+    const servers = await getUserServers(req.user.id);
+    const serversWithChannels = [];
+    for (const s of servers) {
+      const channels = await getServerChannels(s.id);
+      serversWithChannels.push({
+        id: s.id, name: s.name, iconUrl: s.icon_url, role: s.role,
+        inviteCode: s.invite_code, ownerId: s.owner_id,
+        channels
+      });
+    }
     res.json({ servers: serversWithChannels });
   } catch (error) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-app.post('/api/servers', authMiddleware, (req, res) => {
+app.post('/api/servers', authMiddleware, async (req, res) => {
   try {
     const { name } = req.body;
     if (!name || name.length < 2 || name.length > 50)
       return res.status(400).json({ error: 'Nome do servidor deve ter entre 2 e 50 caracteres' });
 
     let inviteCode = generateInviteCode();
-    while (queryOne('SELECT id FROM servers WHERE invite_code = ?', [inviteCode]))
+    while (await queryOne('SELECT id FROM servers WHERE invite_code = $1', [inviteCode]))
       inviteCode = generateInviteCode();
 
-    const db = getDb();
-    db.run('INSERT INTO servers (name, invite_code, owner_id) VALUES (?, ?, ?)', [sanitizeHtml(name), inviteCode, req.user.id]);
-    const result = db.exec('SELECT last_insert_rowid() as id');
-    const serverId = result[0].values[0][0];
-    db.run('INSERT INTO server_members (server_id, user_id, role) VALUES (?, ?, ?)', [serverId, req.user.id, 'owner']);
-    db.run('INSERT INTO channels (server_id, name, type, position) VALUES (?, ?, ?, 0)', [serverId, 'geral', 'text']);
-    db.run('INSERT INTO channels (server_id, name, type, position) VALUES (?, ?, ?, 1)', [serverId, 'ajuda', 'text']);
-    db.run('INSERT INTO channels (server_id, name, type, position) VALUES (?, ?, ?, 2)', [serverId, 'Voz Geral', 'voice']);
-    saveDatabase();
+    const serverResult = await runReturningId('INSERT INTO servers (name, invite_code, owner_id) VALUES ($1, $2, $3) RETURNING id', [sanitizeHtml(name), inviteCode, req.user.id]);
+    const serverId = serverResult.id;
+    await run('INSERT INTO server_members (server_id, user_id, role) VALUES ($1, $2, $3)', [serverId, req.user.id, 'owner']);
+    await run('INSERT INTO channels (server_id, name, type, position) VALUES ($1, $2, $3, $4)', [serverId, 'geral', 'text', 0]);
+    await run('INSERT INTO channels (server_id, name, type, position) VALUES ($1, $2, $3, $4)', [serverId, 'ajuda', 'text', 1]);
+    await run('INSERT INTO channels (server_id, name, type, position) VALUES ($1, $2, $3, $4)', [serverId, 'Voz Geral', 'voice', 2]);
 
-    const newServer = queryOne('SELECT * FROM servers WHERE id = ?', [serverId]);
-    const channels = getServerChannels(serverId);
+    const newServer = await queryOne('SELECT * FROM servers WHERE id = $1', [serverId]);
+    const channels = await getServerChannels(serverId);
     res.json({ success: true, server: { id: newServer.id, name: newServer.name, inviteCode: newServer.invite_code, channels } });
   } catch (error) {
     console.error('Erro ao criar servidor:', error);
@@ -395,20 +366,20 @@ app.post('/api/servers', authMiddleware, (req, res) => {
   }
 });
 
-app.post('/api/servers/join', authMiddleware, (req, res) => {
+app.post('/api/servers/join', authMiddleware, async (req, res) => {
   try {
     const { inviteCode } = req.body;
     if (!inviteCode) return res.status(400).json({ error: 'Código de convite é obrigatório' });
-    const srv = queryOne('SELECT * FROM servers WHERE invite_code = ?', [inviteCode]);
+    const srv = await queryOne('SELECT * FROM servers WHERE invite_code = $1', [inviteCode]);
     if (!srv) return res.status(404).json({ error: 'Servidor não encontrado. Verifique o código.' });
-    if (isServerMember(srv.id, req.user.id))
+    if (await isServerMember(srv.id, req.user.id))
       return res.status(400).json({ error: 'Você já faz parte deste servidor' });
 
-    const banned = queryOne('SELECT * FROM moderation WHERE server_id = ? AND user_id = ? AND action = ?', [srv.id, req.user.id, 'ban']);
+    const banned = await queryOne('SELECT * FROM moderation WHERE server_id = $1 AND user_id = $2 AND action = $3', [srv.id, req.user.id, 'ban']);
     if (banned) return res.status(403).json({ error: 'Você foi banido deste servidor' });
 
-    run('INSERT INTO server_members (server_id, user_id) VALUES (?, ?)', [srv.id, req.user.id]);
-    const channels = getServerChannels(srv.id);
+    await run('INSERT INTO server_members (server_id, user_id) VALUES ($1, $2)', [srv.id, req.user.id]);
+    const channels = await getServerChannels(srv.id);
     res.json({ success: true, server: { id: srv.id, name: srv.name, inviteCode: srv.invite_code, channels } });
   } catch (error) {
     console.error('Erro ao entrar no servidor:', error);
@@ -416,22 +387,22 @@ app.post('/api/servers/join', authMiddleware, (req, res) => {
   }
 });
 
-app.post('/api/servers/:serverId/channels', authMiddleware, (req, res) => {
+app.post('/api/servers/:serverId/channels', authMiddleware, async (req, res) => {
   try {
     const { serverId } = req.params;
     const { name, type } = req.body;
     if (!name || name.length < 2 || name.length > 30)
       return res.status(400).json({ error: 'Nome do canal deve ter entre 2 e 30 caracteres' });
-    const srv = queryOne('SELECT * FROM servers WHERE id = ?', [serverId]);
+    const srv = await queryOne('SELECT * FROM servers WHERE id = $1', [serverId]);
     if (!srv) return res.status(404).json({ error: 'Servidor não encontrado' });
-    if (!isModerator(parseInt(serverId), req.user.id))
+    if (!(await isModerator(parseInt(serverId), req.user.id)))
       return res.status(403).json({ error: 'Sem permissão para criar canais' });
 
     const channelType = (type === 'voice') ? 'voice' : 'text';
-    const maxPos = queryOne('SELECT MAX(position) as pos FROM channels WHERE server_id = ?', [serverId]);
+    const maxPos = await queryOne('SELECT MAX(position) as pos FROM channels WHERE server_id = $1', [serverId]);
     const pos = (maxPos?.pos || 0) + 1;
-    run('INSERT INTO channels (server_id, name, type, position) VALUES (?, ?, ?, ?)', [serverId, sanitizeHtml(name), channelType, pos]);
-    const channels = getServerChannels(parseInt(serverId));
+    await run('INSERT INTO channels (server_id, name, type, position) VALUES ($1, $2, $3, $4)', [serverId, sanitizeHtml(name), channelType, pos]);
+    const channels = await getServerChannels(parseInt(serverId));
     res.json({ success: true, channels });
   } catch (error) {
     console.error('Erro ao criar canal:', error);
@@ -439,9 +410,9 @@ app.post('/api/servers/:serverId/channels', authMiddleware, (req, res) => {
   }
 });
 
-app.get('/api/servers/:serverId/invite', authMiddleware, (req, res) => {
+app.get('/api/servers/:serverId/invite', authMiddleware, async (req, res) => {
   try {
-    const srv = queryOne('SELECT * FROM servers WHERE id = ?', [req.params.serverId]);
+    const srv = await queryOne('SELECT * FROM servers WHERE id = $1', [req.params.serverId]);
     if (!srv) return res.status(404).json({ error: 'Servidor não encontrado' });
     res.json({ inviteCode: srv.invite_code });
   } catch (error) {
@@ -449,14 +420,14 @@ app.get('/api/servers/:serverId/invite', authMiddleware, (req, res) => {
   }
 });
 
-app.get('/api/channels/:channelId/messages', authMiddleware, (req, res) => {
+app.get('/api/channels/:channelId/messages', authMiddleware, async (req, res) => {
   try {
     const channelId = parseInt(req.params.channelId);
     const limit = Math.min(parseInt(req.query.limit) || 50, 100);
     const before = req.query.before ? parseInt(req.query.before) : null;
-    const messages = getChannelMessages(channelId, limit, before);
+    const messages = await getChannelMessages(channelId, limit, before);
     const messageIds = messages.map(m => m.id);
-    const reactions = getReactionsForMessages(messageIds);
+    const reactions = await getReactionsForMessages(messageIds);
     const messagesWithReactions = messages.map(m => ({ ...m, reactions: reactions[m.id] || [] }));
     res.json({ messages: messagesWithReactions, hasMore: messages.length === limit });
   } catch (error) {
@@ -464,16 +435,16 @@ app.get('/api/channels/:channelId/messages', authMiddleware, (req, res) => {
   }
 });
 
-app.get('/api/channels/:channelId/search', authMiddleware, (req, res) => {
+app.get('/api/channels/:channelId/search', authMiddleware, async (req, res) => {
   try {
     const channelId = parseInt(req.params.channelId);
     const q = req.query.q;
     if (!q || q.length < 2) return res.json({ messages: [] });
-    const messages = queryAll(`
+    const messages = await query(`
       SELECT m.*, u.username, u.avatar_seed
       FROM messages m
       INNER JOIN users u ON m.user_id = u.id
-      WHERE m.channel_id = ? AND m.content LIKE ?
+      WHERE m.channel_id = $1 AND m.content LIKE $2
       ORDER BY m.created_at DESC
       LIMIT 50
     `, [channelId, `%${q}%`]);
@@ -483,17 +454,17 @@ app.get('/api/channels/:channelId/search', authMiddleware, (req, res) => {
   }
 });
 
-app.post('/api/channels/:channelId/messages/:messageId/reactions', authMiddleware, (req, res) => {
+app.post('/api/channels/:channelId/messages/:messageId/reactions', authMiddleware, async (req, res) => {
   try {
     const messageId = parseInt(req.params.messageId);
     const { emoji } = req.body;
     if (!emoji) return res.status(400).json({ error: 'Emoji obrigatório' });
-    const existing = queryOne('SELECT * FROM reactions WHERE message_id = ? AND user_id = ? AND emoji = ?', [messageId, req.user.id, emoji]);
+    const existing = await queryOne('SELECT * FROM reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3', [messageId, req.user.id, emoji]);
     if (existing) {
-      run('DELETE FROM reactions WHERE id = ?', [existing.id]);
+      await run('DELETE FROM reactions WHERE id = $1', [existing.id]);
       res.json({ success: true, action: 'removed' });
     } else {
-      run('INSERT INTO reactions (message_id, user_id, emoji) VALUES (?, ?, ?)', [messageId, req.user.id, emoji]);
+      await run('INSERT INTO reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)', [messageId, req.user.id, emoji]);
       res.json({ success: true, action: 'added' });
     }
   } catch (error) {
@@ -501,47 +472,43 @@ app.post('/api/channels/:channelId/messages/:messageId/reactions', authMiddlewar
   }
 });
 
-app.put('/api/messages/:messageId', authMiddleware, (req, res) => {
+app.put('/api/messages/:messageId', authMiddleware, async (req, res) => {
   try {
     const messageId = parseInt(req.params.messageId);
-    const msg = queryOne('SELECT * FROM messages WHERE id = ?', [messageId]);
+    const msg = await queryOne('SELECT * FROM messages WHERE id = $1', [messageId]);
     if (!msg) return res.status(404).json({ error: 'Mensagem não encontrada' });
     if (msg.user_id !== req.user.id) return res.status(403).json({ error: 'Sem permissão' });
     const { content } = req.body;
     if (!content || content.trim().length === 0) return res.status(400).json({ error: 'Conteúdo obrigatório' });
-    run('UPDATE messages SET content = ?, edited = 1, edited_at = datetime("now") WHERE id = ?', [sanitizeHtml(content), messageId]);
+    await run('UPDATE messages SET content = $1, edited = 1, edited_at = NOW() WHERE id = $2', [sanitizeHtml(content), messageId]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-app.delete('/api/messages/:messageId', authMiddleware, (req, res) => {
+app.delete('/api/messages/:messageId', authMiddleware, async (req, res) => {
   try {
     const messageId = parseInt(req.params.messageId);
-    const msg = queryOne('SELECT * FROM messages WHERE id = ?', [messageId]);
+    const msg = await queryOne('SELECT * FROM messages WHERE id = $1', [messageId]);
     if (!msg) return res.status(404).json({ error: 'Mensagem não encontrada' });
-    if (msg.user_id !== req.user.id && !isModerator(msg.channel_id, req.user.id)) {
+    if (msg.user_id !== req.user.id && !(await isModerator(msg.channel_id, req.user.id))) {
       return res.status(403).json({ error: 'Sem permissão' });
     }
-    run('DELETE FROM messages WHERE id = ?', [messageId]);
+    await run('DELETE FROM messages WHERE id = $1', [messageId]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-app.post('/api/upload', authMiddleware, upload.single('file'), (req, res) => {
+app.post('/api/upload', authMiddleware, upload.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     const url = `/uploads/${req.file.filename}`;
-    const db = getDb();
-    db.run('INSERT INTO file_uploads (user_id, filename, original_name, mime_type, size, url) VALUES (?, ?, ?, ?, ?, ?)',
+    const result = await runReturningId('INSERT INTO file_uploads (user_id, filename, original_name, mime_type, size, url) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
       [req.user.id, req.file.filename, req.file.originalname, req.file.mimetype, req.file.size, url]);
-    const result = db.exec('SELECT last_insert_rowid() as id');
-    const fileId = result[0].values[0][0];
-    saveDatabase();
-    res.json({ success: true, file: { id: fileId, url, originalName: req.file.originalname, mimeType: req.file.mimetype, size: req.file.size } });
+    res.json({ success: true, file: { id: result.id, url, originalName: req.file.originalname, mimeType: req.file.mimetype, size: req.file.size } });
   } catch (error) {
     res.status(500).json({ error: 'Erro no upload' });
   }
@@ -562,15 +529,12 @@ const avatarUpload = multer({
   }
 });
 
-app.post('/api/avatar', authMiddleware, avatarUpload.single('avatar'), (req, res) => {
+app.post('/api/avatar', authMiddleware, avatarUpload.single('avatar'), async (req, res) => {
   try {
     console.log('[AVATAR] Upload recebido:', req.file ? req.file.filename : 'NENHUM ARQUIVO');
     if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada. Formato aceito: JPEG, PNG, GIF, WebP' });
     const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-    const db = getDb();
-    db.run('UPDATE users SET avatar_seed = ? WHERE id = ?', [avatarUrl, req.user.id]);
-    saveDatabase();
-    console.log('[AVATAR] Atualizado usuario', req.user.id, 'para', avatarUrl);
+    await run('UPDATE users SET avatar_seed = $1 WHERE id = $2', [avatarUrl, req.user.id]);
 
     const sockets = userSockets.get(req.user.id);
     if (sockets) {
@@ -587,17 +551,15 @@ app.post('/api/avatar', authMiddleware, avatarUpload.single('avatar'), (req, res
   }
 });
 
-app.delete('/api/avatar', authMiddleware, (req, res) => {
+app.delete('/api/avatar', authMiddleware, async (req, res) => {
   try {
-    const db = getDb();
-    const user = queryOne('SELECT avatar_seed FROM users WHERE id = ?', [req.user.id]);
+    const user = await queryOne('SELECT avatar_seed FROM users WHERE id = $1', [req.user.id]);
     if (user && user.avatar_seed && user.avatar_seed.startsWith('/uploads/avatars/')) {
       const filePath = path.join(__dirname, 'public', user.avatar_seed);
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
     const newSeed = 'avatar_' + Date.now();
-    db.run('UPDATE users SET avatar_seed = ? WHERE id = ?', [newSeed, req.user.id]);
-    saveDatabase();
+    await run('UPDATE users SET avatar_seed = $1 WHERE id = $2', [newSeed, req.user.id]);
 
     const sockets = userSockets.get(req.user.id);
     if (sockets) {
@@ -613,14 +575,14 @@ app.delete('/api/avatar', authMiddleware, (req, res) => {
   }
 });
 
-app.get('/api/servers/:serverId/members', authMiddleware, (req, res) => {
+app.get('/api/servers/:serverId/members', authMiddleware, async (req, res) => {
   try {
     const serverId = parseInt(req.params.serverId);
-    const members = queryAll(`
+    const members = await query(`
       SELECT u.id, u.username, u.avatar_seed, u.status, sm.role, sm.nickname
       FROM server_members sm
       INNER JOIN users u ON sm.user_id = u.id
-      WHERE sm.server_id = ?
+      WHERE sm.server_id = $1
     `, [serverId]);
     res.json({ members });
   } catch (error) {
@@ -628,22 +590,22 @@ app.get('/api/servers/:serverId/members', authMiddleware, (req, res) => {
   }
 });
 
-app.post('/api/servers/:serverId/moderate', authMiddleware, (req, res) => {
+app.post('/api/servers/:serverId/moderate', authMiddleware, async (req, res) => {
   try {
     const serverId = parseInt(req.params.serverId);
     const { targetUserId, action, reason, duration } = req.body;
-    if (!isModerator(serverId, req.user.id))
+    if (!(await isModerator(serverId, req.user.id)))
       return res.status(403).json({ error: 'Sem permissão de moderação' });
     if (action === 'ban' || action === 'kick') {
-      const targetRole = getMemberRole(serverId, targetUserId);
+      const targetRole = await getMemberRole(serverId, targetUserId);
       if (targetRole === 'owner') return res.status(403).json({ error: 'Não pode moderar o dono do servidor' });
     }
     if (action === 'ban') {
-      run('DELETE FROM server_members WHERE server_id = ? AND user_id = ?', [serverId, targetUserId]);
+      await run('DELETE FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, targetUserId]);
     } else if (action === 'kick') {
-      run('DELETE FROM server_members WHERE server_id = ? AND user_id = ?', [serverId, targetUserId]);
+      await run('DELETE FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, targetUserId]);
     }
-    run('INSERT INTO moderation (server_id, user_id, moderator_id, action, reason, duration) VALUES (?, ?, ?, ?, ?, ?)',
+    await run('INSERT INTO moderation (server_id, user_id, moderator_id, action, reason, duration) VALUES ($1, $2, $3, $4, $5, $6)',
       [serverId, targetUserId, req.user.id, action, reason || '', duration || null]);
     res.json({ success: true });
   } catch (error) {
@@ -651,30 +613,30 @@ app.post('/api/servers/:serverId/moderate', authMiddleware, (req, res) => {
   }
 });
 
-app.put('/api/servers/:serverId/members/:userId/role', authMiddleware, (req, res) => {
+app.put('/api/servers/:serverId/members/:userId/role', authMiddleware, async (req, res) => {
   try {
     const serverId = parseInt(req.params.serverId);
     const userId = parseInt(req.params.userId);
     const { role } = req.body;
-    if (getMemberRole(serverId, req.user.id) !== 'owner')
+    if ((await getMemberRole(serverId, req.user.id)) !== 'owner')
       return res.status(403).json({ error: 'Apenas o dono pode alterar roles' });
     if (!['admin', 'moderator', 'member'].includes(role))
       return res.status(400).json({ error: 'Role inválida' });
-    run('UPDATE server_members SET role = ? WHERE server_id = ? AND user_id = ?', [role, serverId, userId]);
+    await run('UPDATE server_members SET role = $1 WHERE server_id = $2 AND user_id = $3', [role, serverId, userId]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
-app.put('/api/users/status', authMiddleware, (req, res) => {
+app.put('/api/users/status', authMiddleware, async (req, res) => {
   try {
     const { status, customStatus } = req.body;
     if (status && ['online', 'idle', 'dnd', 'offline'].includes(status)) {
-      run('UPDATE users SET status = ?, updated_at = datetime("now") WHERE id = ?', [status, req.user.id]);
+      await run('UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2', [status, req.user.id]);
     }
     if (customStatus !== undefined) {
-      run('UPDATE users SET custom_status = ?, updated_at = datetime("now") WHERE id = ?', [sanitizeHtml(customStatus), req.user.id]);
+      await run('UPDATE users SET custom_status = $1, updated_at = NOW() WHERE id = $2', [sanitizeHtml(customStatus), req.user.id]);
     }
     res.json({ success: true });
   } catch (error) {
@@ -682,16 +644,16 @@ app.put('/api/users/status', authMiddleware, (req, res) => {
   }
 });
 
-app.put('/api/users/password', authMiddleware, (req, res) => {
+app.put('/api/users/password', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Senhas obrigatórias' });
     if (newPassword.length < 6) return res.status(400).json({ error: 'Nova senha deve ter pelo menos 6 caracteres' });
-    const user = findById(req.user.id);
+    const user = await findById(req.user.id);
     if (!bcrypt.compareSync(currentPassword, user.password_hash))
       return res.status(401).json({ error: 'Senha atual incorreta' });
     const salt = bcrypt.genSaltSync(12);
-    run('UPDATE users SET password_hash = ?, updated_at = datetime("now") WHERE id = ?', [bcrypt.hashSync(newPassword, salt), req.user.id]);
+    await run('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [bcrypt.hashSync(newPassword, salt), req.user.id]);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Erro interno do servidor' });
@@ -704,12 +666,12 @@ const connectedUsers = new Map();
 const voiceUsers = new Map();
 const userSockets = new Map();
 
-io.use((socket, next) => {
+io.use(async (socket, next) => {
   const token = socket.handshake.auth.token;
   if (!token) return next(new Error('Autenticação necessária'));
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = findById(decoded.userId);
+    const user = await findById(decoded.userId);
     if (!user) return next(new Error('Usuário não encontrado'));
     socket.user = { id: user.id, username: user.username, avatarSeed: user.avatar_seed };
     next();
@@ -731,8 +693,19 @@ io.on('connection', (socket) => {
   if (!userSockets.has(socket.user.id)) userSockets.set(socket.user.id, new Set());
   userSockets.get(socket.user.id).add(socket.id);
 
-  run('UPDATE users SET status = "online", updated_at = datetime("now") WHERE id = ?', [socket.user.id]);
-  io.emit('user-presence', { userId: socket.user.id, status: 'online' });
+  (async () => {
+    try {
+      await run('UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2', ['online', socket.user.id]);
+      io.emit('user-presence', { userId: socket.user.id, status: 'online' });
+
+      const userServers = await getUserServers(socket.user.id);
+      for (const srv of userServers) {
+        socket.join(`server:${srv.id}`);
+      }
+    } catch (err) {
+      console.error('Erro na inicialização do socket:', err);
+    }
+  })();
 
   socket.emit('userInfo', {
     id: socket.user.id,
@@ -740,28 +713,29 @@ io.on('connection', (socket) => {
     avatarSeed: socket.user.avatarSeed
   });
 
-  const userServers = getUserServers(socket.user.id);
-  for (const srv of userServers) {
-    socket.join(`server:${srv.id}`);
-  }
-
   // ─── Chat ──────────────────────────────────────────────────────────────────
 
   socket.on('joinRoom', (roomName) => {
-    const user = connectedUsers.get(socket.id);
-    if (!user) return;
-    if (user.currentRoom) socket.leave(user.currentRoom);
-    user.currentRoom = roomName;
-    connectedUsers.set(socket.id, user);
-    socket.join(roomName);
-    const channelMatch = roomName.match(/^channel:(\d+)$/);
-    if (channelMatch) {
-      const messages = getChannelMessages(parseInt(channelMatch[1]), 50);
-      const messageIds = messages.map(m => m.id);
-      const reactions = getReactionsForMessages(messageIds);
-      const enriched = messages.map(m => ({ ...m, reactions: reactions[m.id] || [] }));
-      socket.emit('channelHistory', enriched);
-    }
+    (async () => {
+      try {
+        const user = connectedUsers.get(socket.id);
+        if (!user) return;
+        if (user.currentRoom) socket.leave(user.currentRoom);
+        user.currentRoom = roomName;
+        connectedUsers.set(socket.id, user);
+        socket.join(roomName);
+        const channelMatch = roomName.match(/^channel:(\d+)$/);
+        if (channelMatch) {
+          const messages = await getChannelMessages(parseInt(channelMatch[1]), 50);
+          const messageIds = messages.map(m => m.id);
+          const reactions = await getReactionsForMessages(messageIds);
+          const enriched = messages.map(m => ({ ...m, reactions: reactions[m.id] || [] }));
+          socket.emit('channelHistory', enriched);
+        }
+      } catch (err) {
+        console.error('Erro no joinRoom:', err);
+      }
+    })();
   });
 
   socket.on('leaveRoom', (roomName) => {
@@ -774,50 +748,55 @@ io.on('connection', (socket) => {
   });
 
   socket.on('chatMessage', (data) => {
-    const user = connectedUsers.get(socket.id);
-    if (!user || !user.currentRoom) return;
-    const channelMatch = user.currentRoom.match(/^channel:(\d+)$/);
-    if (!channelMatch) return;
-    const channelId = parseInt(channelMatch[1]);
+    (async () => {
+      try {
+        const user = connectedUsers.get(socket.id);
+        if (!user || !user.currentRoom) return;
+        const channelMatch = user.currentRoom.match(/^channel:(\d+)$/);
+        if (!channelMatch) return;
+        const channelId = parseInt(channelMatch[1]);
 
-    const content = sanitizeHtml(data.text?.trim());
-    if (!content || content.length === 0 || content.length > 2000) return;
+        const content = sanitizeHtml(data.text?.trim());
+        if (!content || content.length === 0 || content.length > 2000) return;
 
-    let replyTo = null;
-    if (data.replyTo) {
-      const replyMsg = queryOne('SELECT id FROM messages WHERE id = ? AND channel_id = ?', [data.replyTo, channelId]);
-      if (replyMsg) replyTo = data.replyTo;
-    }
-
-    const db = getDb();
-    if (replyTo) {
-      db.run('INSERT INTO messages (channel_id, user_id, content, reply_to) VALUES (?, ?, ?, ?)', [channelId, user.id, content, replyTo]);
-    } else {
-      db.run('INSERT INTO messages (channel_id, user_id, content) VALUES (?, ?, ?)', [channelId, user.id, content]);
-    }
-    const result = db.exec('SELECT last_insert_rowid() as id');
-    const messageId = result[0].values[0][0];
-    saveDatabase();
-
-    const msg = {
-      id: messageId, channel_id: channelId, user_id: user.id,
-      username: user.username, avatar_seed: user.avatarSeed,
-      content, created_at: new Date().toISOString(), reactions: []
-    };
-
-    io.to(user.currentRoom).emit('chatMessage', msg);
-
-    const mentions = extractMentions(data.text);
-    for (const mention of mentions) {
-      const targetSockets = userSockets.get(mention.id);
-      if (targetSockets) {
-        for (const targetSocketId of targetSockets) {
-          io.to(targetSocketId).emit('mention', {
-            from: user.username, channel: channelId, serverId: channelId, message: content
-          });
+        let replyTo = null;
+        if (data.replyTo) {
+          const replyMsg = await queryOne('SELECT id FROM messages WHERE id = $1 AND channel_id = $2', [data.replyTo, channelId]);
+          if (replyMsg) replyTo = data.replyTo;
         }
+
+        let messageId;
+        if (replyTo) {
+          const result = await runReturningId('INSERT INTO messages (channel_id, user_id, content, reply_to) VALUES ($1, $2, $3, $4) RETURNING id', [channelId, user.id, content, replyTo]);
+          messageId = result.id;
+        } else {
+          const result = await runReturningId('INSERT INTO messages (channel_id, user_id, content) VALUES ($1, $2, $3) RETURNING id', [channelId, user.id, content]);
+          messageId = result.id;
+        }
+
+        const msg = {
+          id: messageId, channel_id: channelId, user_id: user.id,
+          username: user.username, avatar_seed: user.avatarSeed,
+          content, created_at: new Date().toISOString(), reactions: []
+        };
+
+        io.to(user.currentRoom).emit('chatMessage', msg);
+
+        const mentions = await extractMentions(data.text);
+        for (const mention of mentions) {
+          const targetSockets = userSockets.get(mention.id);
+          if (targetSockets) {
+            for (const targetSocketId of targetSockets) {
+              io.to(targetSocketId).emit('mention', {
+                from: user.username, channel: channelId, serverId: channelId, message: content
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro no chatMessage:', err);
       }
-    }
+    })();
   });
 
   socket.on('typing', () => {
@@ -833,31 +812,43 @@ io.on('connection', (socket) => {
   });
 
   socket.on('reaction', (data) => {
-    const user = connectedUsers.get(socket.id);
-    if (!user) return;
-    const { messageId, emoji } = data;
-    if (!messageId || !emoji) return;
-    const existing = queryOne('SELECT * FROM reactions WHERE message_id = ? AND user_id = ? AND emoji = ?', [messageId, user.id, emoji]);
-    if (existing) {
-      run('DELETE FROM reactions WHERE id = ?', [existing.id]);
-    } else {
-      run('INSERT INTO reactions (message_id, user_id, emoji) VALUES (?, ?, ?)', [messageId, user.id, emoji]);
-    }
-    const reactions = getReactionsForMessages([messageId]);
-    io.to(user.currentRoom).emit('reactions-update', { messageId, reactions: reactions[messageId] || [] });
+    (async () => {
+      try {
+        const user = connectedUsers.get(socket.id);
+        if (!user) return;
+        const { messageId, emoji } = data;
+        if (!messageId || !emoji) return;
+        const existing = await queryOne('SELECT * FROM reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3', [messageId, user.id, emoji]);
+        if (existing) {
+          await run('DELETE FROM reactions WHERE id = $1', [existing.id]);
+        } else {
+          await run('INSERT INTO reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)', [messageId, user.id, emoji]);
+        }
+        const reactions = await getReactionsForMessages([messageId]);
+        io.to(user.currentRoom).emit('reactions-update', { messageId, reactions: reactions[messageId] || [] });
+      } catch (err) {
+        console.error('Erro no reaction:', err);
+      }
+    })();
   });
 
   // ─── Presence ──────────────────────────────────────────────────────────────
 
   socket.on('set-status', (data) => {
-    const { status, customStatus } = data;
-    if (status && ['online', 'idle', 'dnd', 'offline'].includes(status)) {
-      run('UPDATE users SET status = ?, updated_at = datetime("now") WHERE id = ?', [status, socket.user.id]);
-      io.emit('user-presence', { userId: socket.user.id, status });
-    }
-    if (customStatus !== undefined) {
-      run('UPDATE users SET custom_status = ?, updated_at = datetime("now") WHERE id = ?', [sanitizeHtml(customStatus), socket.user.id]);
-    }
+    (async () => {
+      try {
+        const { status, customStatus } = data;
+        if (status && ['online', 'idle', 'dnd', 'offline'].includes(status)) {
+          await run('UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2', [status, socket.user.id]);
+          io.emit('user-presence', { userId: socket.user.id, status });
+        }
+        if (customStatus !== undefined) {
+          await run('UPDATE users SET custom_status = $1, updated_at = NOW() WHERE id = $2', [sanitizeHtml(customStatus), socket.user.id]);
+        }
+      } catch (err) {
+        console.error('Erro no set-status:', err);
+      }
+    })();
   });
 
   // ─── Voice (Full Mesh WebRTC) ──────────────────────────────────────────────
@@ -977,8 +968,14 @@ io.on('connection', (socket) => {
         sockets.delete(socket.id);
         if (sockets.size === 0) {
           userSockets.delete(user.id);
-          run('UPDATE users SET status = "offline", updated_at = datetime("now") WHERE id = ?', [user.id]);
-          io.emit('user-presence', { userId: user.id, status: 'offline' });
+          (async () => {
+            try {
+              await run('UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2', ['offline', user.id]);
+              io.emit('user-presence', { userId: user.id, status: 'offline' });
+            } catch (err) {
+              console.error('Erro no disconnect update:', err);
+            }
+          })();
         }
       }
       if (user.currentRoom) socket.to(user.currentRoom).emit('userLeft', { username: user.username });
@@ -1013,25 +1010,13 @@ io.on('connection', (socket) => {
 async function start() {
   await initDatabase();
 
-  const existingServers = queryOne('SELECT id FROM servers LIMIT 1');
-  if (!existingServers) {
-    console.log('Nenhum servidor encontrado. Criando servidor padrão...');
-    const db = getDb();
-    const inviteCode = generateInviteCode();
-    db.run('INSERT INTO servers (name, invite_code, owner_id) VALUES (?, ?, ?)',
-      ['Comunidade Geral', inviteCode, 1]);
-    const result = db.exec('SELECT last_insert_rowid() as id');
-    const serverId = result[0].values[0][0];
-    db.run('INSERT INTO channels (server_id, name, type, position) VALUES (?, ?, ?, 0)', [serverId, 'geral', 'text']);
-    db.run('INSERT INTO channels (server_id, name, type, position) VALUES (?, ?, ?, 1)', [serverId, 'ajuda', 'text']);
-    db.run('INSERT INTO channels (server_id, name, type, position) VALUES (?, ?, ?, 2)', [serverId, 'Voz Geral', 'voice']);
-    saveDatabase();
-    console.log(`Servidor padrão criado (ID: ${serverId})`);
-  }
-
   // Cleanup expired refresh tokens periodically
-  setInterval(() => {
-    run("DELETE FROM refresh_tokens WHERE expires_at < datetime('now')");
+  setInterval(async () => {
+    try {
+      await run("DELETE FROM refresh_tokens WHERE expires_at < NOW()::text");
+    } catch (err) {
+      console.error('Erro na limpeza de tokens:', err);
+    }
   }, 60 * 60 * 1000);
 
   // Error handler for multer
