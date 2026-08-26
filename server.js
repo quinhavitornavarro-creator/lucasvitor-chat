@@ -53,6 +53,8 @@ const chatLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 app.use('/api/login', authLimiter);
 app.use('/api/register', authLimiter);
+app.use('/api/forgot-password', authLimiter);
+app.use('/api/reset-password', authLimiter);
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -295,6 +297,67 @@ app.post('/api/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro no login:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+// ─── Password Recovery ────────────────────────────────────────────────────────
+const crypto = require('crypto');
+
+function generateResetToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+app.post('/api/forgot-password', authLimiter, async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email é obrigatório' });
+
+    const user = await findByEmail(email);
+    if (!user) {
+      return res.json({ success: true, message: 'Se o email estiver cadastrado, um código de recuperação foi gerado.' });
+    }
+
+    await run('DELETE FROM password_resets WHERE user_id = $1', [user.id]);
+
+    const token = generateResetToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    await run('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, token, expiresAt]);
+
+    console.log(`[PASSWORD RESET] User: ${user.username} | Token: ${token} | Expires: ${expiresAt}`);
+    console.log(`[PASSWORD RESET] URL: ${req.protocol}://${req.get('host')}/reset-password?token=${token}`);
+
+    res.json({ success: true, message: 'Se o email estiver cadastrado, um código de recuperação foi gerado.', resetToken: token });
+  } catch (error) {
+    console.error('Erro no forgot-password:', error);
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
+app.post('/api/reset-password', authLimiter, async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword) return res.status(400).json({ error: 'Token e nova senha são obrigatórios' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres' });
+
+    const resetRecord = await queryOne('SELECT * FROM password_resets WHERE token = $1 AND used = 0', [token]);
+    if (!resetRecord) return res.status(400).json({ error: 'Token inválido ou já utilizado' });
+
+    if (new Date(resetRecord.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Token expirado. Solicite uma nova recuperação.' });
+    }
+
+    const passwordHash = bcrypt.hashSync(newPassword, 10);
+    await run('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [passwordHash, resetRecord.user_id]);
+    await run('UPDATE password_resets SET used = 1 WHERE id = $1', [resetRecord.id]);
+    await run('DELETE FROM refresh_tokens WHERE user_id = $1', [resetRecord.user_id]);
+
+    console.log(`[PASSWORD RESET] Senha alterada com sucesso para user_id: ${resetRecord.user_id}`);
+
+    res.json({ success: true, message: 'Senha alterada com sucesso. Faça login com a nova senha.' });
+  } catch (error) {
+    console.error('Erro no reset-password:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });

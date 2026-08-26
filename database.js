@@ -138,6 +138,18 @@ async function initDatabase() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      used INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT NOW(),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_channel_created ON messages(channel_id, created_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_reactions_message ON reactions(message_id)`);
@@ -148,6 +160,8 @@ async function initDatabase() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_moderation_server ON moderation(server_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_moderation_user ON moderation(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_file_uploads_message ON file_uploads(message_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token)`);
 
   const defaultServer = await pool.query('SELECT id FROM servers LIMIT 1');
   if (defaultServer.rows.length === 0) {
