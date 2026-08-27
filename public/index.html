@@ -2868,6 +2868,7 @@ let currentServer = null, currentChannel = null, currentChannelId = null;
 let servers = [], currentServerId = null, currentUserRole = 'member';
 let localStream = null, isMuted = false, isDeafened = false, currentVoiceChannelId = null;
 let peers = {}, isScreenSharing = false, screenStream = null;
+let voiceUsersMap = {};
 let isCameraOn = false, cameraStream = null;
 let speakingCheckInterval = null, localAnalyser = null, localAnalyserData = null;
 let replyingTo = null, editingMessageId = null, audioCtx = null;
@@ -2885,7 +2886,7 @@ function escapeHtml(t){
 function getAvatarUrl(seed){
   if(!seed) return '';
   if(seed.startsWith('/') || seed.startsWith('http')) return seed;
-  return 'https://api.dicebear.com/7.x/avataaars/png?seed='+encodeURIComponent(seed)+'&size=128&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf';
+  return 'https://api.dicebear.com/7.x/avataaars/svg?seed='+encodeURIComponent(seed)+'&size=128';
 }
 
 function formatTime(dateStr){
@@ -3195,6 +3196,7 @@ function connectSocket(){
 
   socket.on('voice-disconnected',()=>{
     playSound('leave');
+    voiceUsersMap={};
     cleanupVoice();
   });
 
@@ -3208,7 +3210,10 @@ function connectSocket(){
   });
 
   socket.on('voice-users-list',data=>{
+    voiceUsersMap={};
+    data.users.forEach(u=>{ voiceUsersMap[u.socketId]=u; });
     updateVoiceUsersList(data.users);
+    updateVoiceChannelUsersUI();
   });
 
   socket.on('voice-offer',async data=>{
@@ -4217,6 +4222,8 @@ function cleanupVoice(){
   $('voice-connected-panel')?.classList.add('hidden');
   $('video-grid').innerHTML='';
   document.querySelectorAll('.voice-channel-item').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('[id^="voice-users-"]').forEach(div=>div.innerHTML='');
+  voiceUsersMap={};
 }
 
 async function createPeerConnection(socketId,userId,username,avatarSeed,isInitiator){
@@ -4302,6 +4309,26 @@ function removeParticipantCard(socketId){
   if(card) card.remove();
 }
 
+function addLocalScreenCard(stream){
+  const grid=$('video-grid');
+  if(!grid) return;
+  const existing=document.querySelector('[data-voice-socket="local-screen"]');
+  if(existing) existing.remove();
+  const card=document.createElement('div');
+  card.className='video-tile';
+  card.dataset.voiceSocket='local-screen';
+  const video=document.createElement('video');
+  video.autoplay=true; video.playsInline=true; video.muted=true;
+  video.style.cssText='width:100%;height:100%;object-fit:contain;border-radius:var(--radius-md)';
+  video.srcObject=stream;
+  card.appendChild(video);
+  const label=document.createElement('span');
+  label.className='video-name';
+  label.textContent='Sua Tela';
+  card.appendChild(label);
+  grid.appendChild(card);
+}
+
 $('voice-mute-btn')?.addEventListener('click',toggleMute);
 $('mute-btn')?.addEventListener('click',toggleMute);
 
@@ -4357,6 +4384,7 @@ $('voice-video-btn')?.addEventListener('click',async()=>{
     }
     socket?.emit('screen-share-started');
     $('voice-video-btn')?.classList.add('active');
+    addLocalScreenCard(screenStream);
     showToast('info','Screen Share','Compartilhamento iniciado');
   }catch(e){ console.error('screen share error',e); }
 });
@@ -4364,6 +4392,8 @@ $('voice-video-btn')?.addEventListener('click',async()=>{
 function stopScreenShare(){
   isScreenSharing=false;
   if(screenStream){ screenStream.getTracks().forEach(t=>t.stop()); screenStream=null; }
+  const localCard=document.querySelector('[data-voice-socket="local-screen"]');
+  if(localCard) localCard.remove();
 
   for(const [sid,peer] of Object.entries(peers)){
     if(!peer.pc) continue;
@@ -4424,6 +4454,18 @@ function updateVoiceUsersList(users){
 function updateVoiceChannelUsersUI(){
   document.querySelectorAll('.voice-channel-item').forEach(el=>{
     el.classList.toggle('active',el.dataset.channelId==currentVoiceChannelId);
+  });
+  const users=Object.values(voiceUsersMap||{});
+  document.querySelectorAll('[id^="voice-users-"]').forEach(div=>{
+    div.innerHTML='';
+  });
+  users.forEach(u=>{
+    const container=document.getElementById('voice-users-'+u.channelId);
+    if(!container) return;
+    const d=document.createElement('div');
+    d.className='voice-user';
+    d.innerHTML='<img src="'+getAvatarUrl(u.avatarSeed)+'" class="voice-avatar" style="width:20px;height:20px;border-radius:50%;object-fit:cover" alt=""><span>'+escapeHtml(u.username)+'</span>';
+    container.appendChild(d);
   });
 }
 
