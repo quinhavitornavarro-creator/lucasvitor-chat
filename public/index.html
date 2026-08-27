@@ -907,7 +907,16 @@
 
     .voice-user.speaking .voice-avatar {
       animation: speakingPulse 1.5s ease infinite;
-      box-shadow: 0 0 0 3px rgba(34,197,94,0.3);
+      box-shadow: 0 0 0 3px rgba(34,197,94,0.4);
+    }
+
+    .voice-user.speaking {
+      color: #22c55e !important;
+    }
+
+    .voice-user.speaking .voice-time {
+      color: #22c55e;
+      opacity: 0.7;
     }
 
     .voice-user .voice-time {
@@ -1860,6 +1869,10 @@
 
     .video-tile:hover {
       box-shadow: 0 0 0 2px var(--accent-purple);
+    }
+
+    .video-tile.speaking {
+      box-shadow: 0 0 0 2px #22c55e;
     }
 
     .video-tile video {
@@ -5256,13 +5269,16 @@ function startSpeakingDetection(){
 function checkLocalSpeaking(){
   if(!localAnalyser||!localAnalyserData||isMuted){
     setSpeakingState('local',false);
+    if(socket?.id) setSpeakingState(socket.id,false);
     return;
   }
   localAnalyser.getByteFrequencyData(localAnalyserData);
   let sum=0;
   for(let i=0;i<localAnalyserData.length;i++) sum+=localAnalyserData[i];
   const avg=sum/localAnalyserData.length;
-  setSpeakingState('local',avg>20);
+  const speaking=avg>20;
+  setSpeakingState('local',speaking);
+  if(socket?.id) setSpeakingState(socket.id,speaking);
 }
 
 function checkRemoteSpeaking(sid,analyser){
@@ -5277,7 +5293,18 @@ function checkRemoteSpeaking(sid,analyser){
 
 function setSpeakingState(sid,speaking){
   const card=document.querySelector('[data-voice-socket="'+sid+'"]');
-  if(card) card.classList.toggle('speaking',speaking);
+  if(card){
+    card.classList.toggle('speaking',speaking);
+    if(speaking) card.style.boxShadow='0 0 0 2px #22c55e';
+    else card.style.boxShadow='';
+  }
+  document.querySelectorAll('.voice-user').forEach(el=>{
+    if(el.dataset.socketId===sid){
+      el.classList.toggle('speaking',speaking);
+      if(speaking) el.style.color='#22c55e';
+      else el.style.color='';
+    }
+  });
 }
 
 async function joinVoiceChannel(ch){
@@ -5357,6 +5384,7 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
   const remoteStream=new MediaStream();
   pc.ontrack=e=>{
     const track=e.track;
+    const stream=e.streams[0];
     if(track.kind==='video'){
       let videoEl=document.querySelector('[data-voice-socket="'+socketId+'"] video');
       if(!videoEl){
@@ -5382,26 +5410,35 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
           }
         }
       }
-      if(videoEl&&e.streams[0]) videoEl.srcObject=e.streams[0];
+      if(videoEl&&stream){
+        videoEl.srcObject=stream;
+        videoEl.play().catch(()=>{});
+      }
     }
     if(track.kind==='audio'){
       let audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
       if(!audioEl){
         audioEl=document.createElement('audio');
-        audioEl.autoplay=true;
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
       }
-      if(e.streams[0]) audioEl.srcObject=e.streams[0];
+      if(stream){
+        audioEl.srcObject=stream;
+        audioEl.play().catch(()=>{});
+      }
     }
 
-    if(!peers[socketId].analyser){
-      const ctx=getAudioCtx();
-      const src=ctx.createMediaStreamSource(remoteStream);
-      const analyser=ctx.createAnalyser();
-      analyser.fftSize=512;
-      src.connect(analyser);
-      peers[socketId].analyser=analyser;
+    if(stream&&!peers[socketId].analyser){
+      try{
+        const ctx=getAudioCtx();
+        if(ctx.state==='suspended') ctx.resume();
+        const src=ctx.createMediaStreamSource(stream);
+        const analyser=ctx.createAnalyser();
+        analyser.fftSize=512;
+        src.connect(analyser);
+        peers[socketId].analyser=analyser;
+      }catch(e){}
+    }
     }
   };
 
@@ -5646,6 +5683,7 @@ function updateVoiceChannelUsersUI(){
     if(!container) return;
     const d=document.createElement('div');
     d.className='voice-user';
+    d.dataset.socketId=u.socketId||'';
     const live=u.isScreenSharing?' <span style="color:#ef4444;font-size:0.65rem;font-weight:700;margin-left:4px">AO VIVO</span>':'';
     const now=new Date();
     const ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
