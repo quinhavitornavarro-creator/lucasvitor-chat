@@ -3785,8 +3785,13 @@ function escapeHtml(t){
 
 function getAvatarUrl(seed){
   if(!seed) return '';
-  if(seed.startsWith('/') || seed.startsWith('http')) return seed;
-  return 'https://ui-avatars.com/api/?name='+encodeURIComponent(seed)+'&background=7c3aed&color=fff&size=128&bold=true&format=svg';
+  if(seed.startsWith('http')) return seed;
+  if(seed.startsWith('/uploads/avatars/')) return seed;
+  return 'https://api.dicebear.com/7.x/adventurer/svg?seed='+encodeURIComponent(seed)+'&size=128';
+}
+
+function avatarOnerror(name){
+  return 'onerror="this.onerror=null;this.src=\'https://api.dicebear.com/7.x/adventurer/svg?seed='+encodeURIComponent(name)+'&size=128\'"';
 }
 
 function formatTime(dateStr){
@@ -4026,7 +4031,8 @@ function updateUserUI(){
   if(!currentUser) return;
   const name=currentUser.username||currentUser.email;
   $('user-display-name').textContent=name;
-  $('user-avatar-small').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="">';
+  const url=getAvatarUrl(currentUser.avatarSeed);
+  $('user-avatar-small').innerHTML='<img src="'+url+'" alt="" onerror="this.src=\'https://api.dicebear.com/7.x/adventurer/svg?seed='+encodeURIComponent(name)+'&size=128\'">';
   $('user-avatar-small').style.background=generateColor(name);
 }
 
@@ -4586,7 +4592,7 @@ function renderMessage(msg,showHeader){
   }
 
   div.innerHTML=
-    '<div class="msg-avatar" onclick="window._showProfile('+msg.user_id+',\''+escapeHtml(name)+'\',\''+(msg.avatar_seed||'')+'\')">'+(avatarUrl?'<img src="'+avatarUrl+'" alt="">':name[0]?.toUpperCase()||'?')+'</div>'+
+    '<div class="msg-avatar" onclick="window._showProfile('+msg.user_id+',\''+escapeHtml(name)+'\',\''+(msg.avatar_seed||'')+'\')">'+(avatarUrl?'<img src="'+avatarUrl+'" alt="" '+avatarOnerror(name)+'>':name[0]?.toUpperCase()||'?')+'</div>'+
     '<div class="msg-body">'+replyHtml+
     '<div class="msg-header"><span class="msg-author" style="color:'+generateColor(name)+'" onclick="window._showProfile('+msg.user_id+',\''+escapeHtml(name)+'\',\''+(msg.avatar_seed||'')+'\')">'+escapeHtml(name)+'</span><span class="msg-timestamp">'+formatTime(msg.created_at)+'</span></div>'+
     '<span class="msg-timestamp-inline">'+formatShortTime(msg.created_at)+'</span>'+
@@ -4767,7 +4773,7 @@ function hideContextMenu(){ document.querySelectorAll('.context-menu').forEach(c
 window._showProfile=function(userId,name,seed){
   $('profile-username-display').textContent=name;
   $('profile-display-name').textContent=name;
-  $('profile-avatar-large').innerHTML='<img src="'+getAvatarUrl(seed)+'" alt="" style="width:100%;height:100%;object-fit:cover">';
+  $('profile-avatar-large').innerHTML='<img src="'+getAvatarUrl(seed)+'" alt="" style="width:100%;height:100%;object-fit:cover" '+avatarOnerror(name)+'>';
   $('profile-avatar-large').style.background=generateColor(name);
   $('profile-display-status').textContent='';
   $('profile-role-badges').innerHTML='';
@@ -4978,7 +4984,7 @@ function openSettings(){
   overlay.classList.remove('hidden');
   document.body.style.overflow='hidden';
   loadAudioDevices();
-  $('settings-avatar').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="">';
+  $('settings-avatar').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="" '+avatarOnerror(currentUser.username)+'>';
   $('settings-username').textContent=currentUser.username||'';
   $('settings-tag').textContent='#'+(currentUser.id||'');
   $('settings-username-display').textContent=currentUser.username||'';
@@ -5095,9 +5101,9 @@ function updateProfilePreview(){
   $('preview-tag').textContent=currentUser.username+'#'+currentUser.id;
   $('preview-bio').textContent=currentUser.bio||'';
   $('settings-bio-input').value=currentUser.bio||'';
-  $('settings-avatar-preview').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="" style="width:100%;height:100%;object-fit:cover">';
+  $('settings-avatar-preview').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="" style="width:100%;height:100%;object-fit:cover" '+avatarOnerror(currentUser.username)+'>';
   $('settings-avatar-preview').style.background=generateColor(currentUser.username||'');
-  $('profile-avatar-large-preview').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="" style="width:100%;height:100%;object-fit:cover">';
+  $('profile-avatar-large-preview').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="" style="width:100%;height:100%;object-fit:cover" '+avatarOnerror(currentUser.username)+'>';
   $('profile-avatar-large-preview').style.background=generateColor(currentUser.username||'');
 }
 
@@ -5212,7 +5218,7 @@ function renderMemberCard(m,isOffline=false){
   const name=m.nickname||m.username;
   const roleBadge=m.role&&m.role!=='member'?'<span class="role-badge" style="background:'+generateColor(m.role)+'">'+m.role+'</span>':'';
   return '<div class="member-card'+(isOffline?' offline':'')+'" data-user-id="'+m.id+'" onclick="window._showProfile('+m.id+',\''+escapeHtml(name)+'\',\''+(m.avatar_seed||'')+'\')">'+
-    '<div class="member-avatar" style="background:'+generateColor(name)+'"><img src="'+getAvatarUrl(m.avatar_seed)+'" alt=""><span class="member-status status-dot '+(m.status||'offline')+'"></span></div>'+
+    '<div class="member-avatar" style="background:'+generateColor(name)+'"><img src="'+getAvatarUrl(m.avatar_seed)+'" alt="" '+avatarOnerror(name)+'><span class="member-status status-dot '+(m.status||'offline')+'"></span></div>'+
     '<div class="member-info"><div class="member-name">'+escapeHtml(name)+' '+roleBadge+'</div>'+
     (m.custom_status?'<div class="member-game">'+escapeHtml(m.custom_status)+'</div>':'')+
     '</div></div>';
@@ -5425,7 +5431,7 @@ function addParticipantCard(socketId,username,avatarSeed,isLocal){
   const card=document.createElement('div');
   card.className='video-tile';
   card.dataset.voiceSocket=socketId;
-  card.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg-surface);border-radius:var(--radius-md)"><img src="'+getAvatarUrl(avatarSeed)+'" style="width:48px;height:48px;border-radius:50%" alt=""></div><span class="video-name">'+escapeHtml(username)+'</span>';
+  card.innerHTML='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg-surface);border-radius:var(--radius-md)"><img src="'+getAvatarUrl(avatarSeed)+'" style="width:48px;height:48px;border-radius:50%" alt="" '+avatarOnerror(username)+'></div><span class="video-name">'+escapeHtml(username)+'</span>';
   grid.appendChild(card);
 }
 
@@ -5607,7 +5613,7 @@ function updateVoiceChannelUsersUI(){
     const live=u.isScreenSharing?' <span style="color:#ef4444;font-size:0.65rem;font-weight:700;margin-left:4px">AO VIVO</span>':'';
     const now=new Date();
     const ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
-    d.innerHTML='<div class="voice-avatar"><img src="'+getAvatarUrl(u.avatarSeed)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;image-rendering:crisp-edges" alt=""></div><span>'+escapeHtml(u.username)+live+'</span><span class="voice-time">'+ts+'</span>';
+    d.innerHTML='<div class="voice-avatar"><img src="'+getAvatarUrl(u.avatarSeed)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;image-rendering:crisp-edges" alt="" '+avatarOnerror(u.username)+'></div><span>'+escapeHtml(u.username)+live+'</span><span class="voice-time">'+ts+'</span>';
     container.appendChild(d);
   });
 }
