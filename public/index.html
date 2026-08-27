@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>NexusChat</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4011,13 +4014,23 @@ $('reset-form')?.addEventListener('submit',async e=>{
 });
 
 async function checkAuth(){
+  const token=localStorage.getItem('token');
+  if(!token){
+    $('auth-screen').classList.remove('hidden');
+    $('chat-screen').classList.add('hidden');
+    return;
+  }
   try{
     const d=await apiCall('/api/me');
     if(d.user){
       currentUser=d.user; currentUserId=d.user.id;
       enterApp();
     }
-  }catch(e){}
+  }catch(e){
+    localStorage.removeItem('token');
+    $('auth-screen').classList.remove('hidden');
+    $('chat-screen').classList.add('hidden');
+  }
 }
 
 function enterApp(){
