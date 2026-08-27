@@ -884,8 +884,8 @@
     }
 
     .voice-user .voice-avatar {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       border-radius: var(--radius-full);
       background: var(--accent-purple);
       display: flex;
@@ -894,11 +894,185 @@
       font-size: 0.625rem;
       font-weight: 700;
       color: #fff;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .voice-user .voice-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: crisp-edges;
     }
 
     .voice-user.speaking .voice-avatar {
       animation: speakingPulse 1.5s ease infinite;
       box-shadow: 0 0 0 3px rgba(34,197,94,0.3);
+    }
+
+    .voice-user .voice-time {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-left: auto;
+      opacity: 0.6;
+    }
+
+    /* ─── Quick Links ──────────────────────────────────────────────── */
+
+    .quick-links {
+      padding: 8px 8px 0;
+      flex-shrink: 0;
+    }
+
+    .quick-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all var(--transition-fast);
+    }
+
+    .quick-link:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .quick-link-icon {
+      font-size: 1.1rem;
+    }
+
+    /* ─── Voice Panel (Discord Style) ──────────────────────────────── */
+
+    .voice-panel {
+      background: var(--bg-deepest);
+      border-top: 1px solid var(--border-subtle);
+      flex-shrink: 0;
+      padding-bottom: 4px;
+    }
+
+    .voice-panel-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+    }
+
+    .voice-panel-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .voice-panel-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: voicePulse 2s ease infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes voicePulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+    }
+
+    .voice-panel-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .voice-panel-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--success);
+      text-transform: none;
+    }
+
+    .voice-panel-channel {
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .voice-panel-disconnect {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      transition: all var(--transition-fast);
+      flex-shrink: 0;
+    }
+
+    .voice-panel-disconnect:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .voice-panel-waveform {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 2px;
+      height: 16px;
+      padding: 0 12px 4px;
+      opacity: 0.5;
+    }
+
+    .voice-panel-controls {
+      display: flex;
+      gap: 4px;
+      padding: 0 8px 4px;
+    }
+
+    .voice-ctrl-btn {
+      flex: 1;
+      height: 32px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all var(--transition-fast);
+    }
+
+    .voice-ctrl-btn:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .voice-ctrl-btn.active {
+      background: var(--accent-purple);
+      color: #fff;
+    }
+
+    .voice-ctrl-btn.disconnect-voice {
+      background: var(--bg-surface);
+    }
+
+    .voice-ctrl-btn.disconnect-voice:hover {
+      background: var(--danger);
+      color: #fff;
     }
 
     /* ========================================
@@ -1633,33 +1807,6 @@
     /* ========================================
        VOICE PANEL
     ======================================== */
-    .voice-panel {
-      background: var(--bg-deepest);
-      border-top: 1px solid var(--border-subtle);
-      padding: 12px;
-      flex-shrink: 0;
-    }
-
-    .voice-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    .voice-status .voice-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: var(--radius-full);
-      background: var(--success);
-      animation: pulse 2s ease infinite;
-    }
-
-    .voice-status .voice-channel-name {
-      font-size: 0.8125rem;
-      font-weight: 600;
-      color: var(--success);
-    }
 
     .voice-controls {
       display: flex;
@@ -3134,19 +3281,32 @@
         </div>
       </div>
 
+      <!-- Quick Links -->
+      <div class="quick-links">
+        <div class="quick-link"><span class="quick-link-icon">📅</span> Eventos</div>
+        <div class="quick-link"><span class="quick-link-icon">👥</span> Membros</div>
+      </div>
+
       <div class="channel-list" id="channels-list"></div>
 
       <!-- Voice Connected Panel -->
       <div id="voice-connected-panel" class="voice-panel hidden">
-        <div class="voice-status">
-          <span class="voice-indicator"></span>
-          <span class="voice-channel-name" id="voice-channel-name">Canal de Voz</span>
+        <div class="voice-panel-top">
+          <div class="voice-panel-status">
+            <div class="voice-panel-dot"></div>
+            <div class="voice-panel-info">
+              <span class="voice-panel-label">Voz conectada</span>
+              <span class="voice-panel-channel" id="voice-channel-name">Canal de Voz</span>
+            </div>
+          </div>
+          <button id="voice-disconnect-btn" class="voice-panel-disconnect" data-tooltip="Desconectar">📞</button>
         </div>
-        <div class="voice-controls">
-          <button id="voice-mute-btn" data-tooltip="Mudo">🎤</button>
-          <button id="voice-deafen-btn" data-tooltip="Surdo">🔊</button>
-          <button id="voice-video-btn" data-tooltip="Video">📹</button>
-          <button id="voice-disconnect-btn" class="disconnect" data-tooltip="Desconectar">📞</button>
+        <div class="voice-panel-waveform" id="voice-waveform"></div>
+        <div class="voice-panel-controls">
+          <button id="voice-mute-btn" class="voice-ctrl-btn" data-tooltip="Mudo">🎤</button>
+          <button id="voice-video-btn" class="voice-ctrl-btn" data-tooltip="Camera">📹</button>
+          <button id="voice-deafen-btn" class="voice-ctrl-btn" data-tooltip="Surdo">🔊</button>
+          <button id="voice-share-btn" class="voice-ctrl-btn" data-tooltip="Compartilhar Tela">🖥️</button>
         </div>
         <div id="video-grid" class="video-grid"></div>
       </div>
@@ -3925,6 +4085,7 @@ function connectSocket(){
     $('voice-channel-name').textContent=chName||'Canal de Voz';
     playSound('join');
     setupLocalAnalyser();
+    initWaveform();
     if(data.existingUsers){
       for(const u of data.existingUsers){
         createPeerConnection(u.socketId,u.userId,u.username,u.avatarSeed,true);
@@ -5142,13 +5303,40 @@ function cleanupVoice(){
   Object.keys(peers).forEach(sid=>removePeer(sid));
   peers={};
   if(speakingCheckInterval){ clearInterval(speakingCheckInterval); speakingCheckInterval=null; }
+  if(waveformInterval){ clearInterval(waveformInterval); waveformInterval=null; }
   localAnalyser=null;
   localAnalyserData=null;
   $('voice-connected-panel')?.classList.add('hidden');
+  $('voice-video-btn')?.classList.remove('active');
+  $('voice-share-btn')?.classList.remove('active');
   $('video-grid').innerHTML='';
   document.querySelectorAll('.voice-channel-item').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('[id^="voice-users-"]').forEach(div=>div.innerHTML='');
   voiceUsersMap={};
+}
+
+// ─── Waveform Animation ──────────────────────────────────────────────────
+
+let waveformInterval=null;
+
+function initWaveform(){
+  const container=$('voice-waveform');
+  if(!container) return;
+  container.innerHTML='';
+  for(let i=0;i<20;i++){
+    const bar=document.createElement('div');
+    bar.style.cssText='width:3px;border-radius:1.5px;background:var(--success);transition:height 0.1s ease;';
+    bar.style.height='2px';
+    container.appendChild(bar);
+  }
+  if(waveformInterval) clearInterval(waveformInterval);
+  waveformInterval=setInterval(()=>{
+    const bars=container.querySelectorAll('div');
+    bars.forEach(bar=>{
+      const h=localAnalyser?Math.max(2,Math.random()*16):Math.max(2,Math.random()*4);
+      bar.style.height=h+'px';
+    });
+  },80);
 }
 
 async function createPeerConnection(socketId,userId,username,avatarSeed,isInitiator){
@@ -5334,10 +5522,13 @@ $('voice-video-btn')?.addEventListener('click',async()=>{
     }
     socket?.emit('screen-share-started');
     $('voice-video-btn')?.classList.add('active');
+    $('voice-share-btn')?.classList.add('active');
     addLocalScreenCard(screenStream);
     showToast('info','Screen Share','Compartilhamento iniciado');
   }catch(e){ console.error('screen share error',e); }
 });
+
+$('voice-share-btn')?.addEventListener('click',()=>$('voice-video-btn')?.click());
 
 function stopScreenShare(){
   isScreenSharing=false;
@@ -5362,6 +5553,7 @@ function stopScreenShare(){
   }
   socket?.emit('screen-share-stopped');
   $('voice-video-btn')?.classList.remove('active');
+  $('voice-share-btn')?.classList.remove('active');
 }
 
 async function toggleCamera(){
@@ -5413,7 +5605,9 @@ function updateVoiceChannelUsersUI(){
     const d=document.createElement('div');
     d.className='voice-user';
     const live=u.isScreenSharing?' <span style="color:#ef4444;font-size:0.65rem;font-weight:700;margin-left:4px">AO VIVO</span>':'';
-    d.innerHTML='<img src="'+getAvatarUrl(u.avatarSeed)+'" class="voice-avatar" style="width:20px;height:20px;border-radius:50%;object-fit:cover" alt=""><span>'+escapeHtml(u.username)+live+'</span>';
+    const now=new Date();
+    const ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+    d.innerHTML='<div class="voice-avatar"><img src="'+getAvatarUrl(u.avatarSeed)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;image-rendering:crisp-edges" alt=""></div><span>'+escapeHtml(u.username)+live+'</span><span class="voice-time">'+ts+'</span>';
     container.appendChild(d);
   });
 }
