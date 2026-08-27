@@ -2886,7 +2886,7 @@ function escapeHtml(t){
 function getAvatarUrl(seed){
   if(!seed) return '';
   if(seed.startsWith('/') || seed.startsWith('http')) return seed;
-  return 'https://api.dicebear.com/7.x/avataaars/svg?seed='+encodeURIComponent(seed)+'&size=128';
+  return 'https://ui-avatars.com/api/?name='+encodeURIComponent(seed)+'&background=7c3aed&color=fff&size=128&bold=true&format=svg';
 }
 
 function formatTime(dateStr){
@@ -3211,7 +3211,7 @@ function connectSocket(){
 
   socket.on('voice-users-list',data=>{
     voiceUsersMap={};
-    data.users.forEach(u=>{ voiceUsersMap[u.socketId]=u; });
+    data.users.forEach(u=>{ voiceUsersMap[u.socketId]={...u,channelId:data.channelId}; });
     updateVoiceUsersList(data.users);
     updateVoiceChannelUsersUI();
   });
