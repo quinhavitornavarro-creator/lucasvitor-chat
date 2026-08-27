@@ -938,6 +938,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
     }
 
     .status-dot {
@@ -1142,6 +1144,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
     }
 
     .msg-body {
@@ -1578,6 +1582,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: crisp-edges;
     }
 
     .member-card .member-status {
@@ -2879,7 +2885,7 @@ function escapeHtml(t){
 function getAvatarUrl(seed){
   if(!seed) return '';
   if(seed.startsWith('/') || seed.startsWith('http')) return seed;
-  return 'https://api.dicebear.com/7.x/avataaars/svg?seed='+encodeURIComponent(seed);
+  return 'https://api.dicebear.com/7.x/avataaars/png?seed='+encodeURIComponent(seed)+'&size=128&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf';
 }
 
 function formatTime(dateStr){
@@ -3176,6 +3182,7 @@ function connectSocket(){
     $('voice-connected-panel').classList.remove('hidden');
     const chName=getChannelNameById(data.channelId);
     $('voice-channel-name').textContent=chName||'Canal de Voz';
+    playSound('join');
     setupLocalAnalyser();
     if(data.existingUsers){
       for(const u of data.existingUsers){
@@ -3187,6 +3194,7 @@ function connectSocket(){
   });
 
   socket.on('voice-disconnected',()=>{
+    playSound('leave');
     cleanupVoice();
   });
 
