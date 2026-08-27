@@ -715,6 +715,99 @@ app.put('/api/users/status', authMiddleware, async (req, res) => {
   }
 });
 
+// ─── Message Pins ─────────────────────────────────────────────────────────
+app.post('/api/channels/:channelId/messages/:messageId/pin', authMiddleware, async (req, res) => {
+  try {
+    const messageId = parseInt(req.params.messageId);
+    const channelId = parseInt(req.params.channelId);
+    const existing = await queryOne('SELECT * FROM message_pins WHERE message_id = $1', [messageId]);
+    if (existing) {
+      await run('DELETE FROM message_pins WHERE message_id = $1', [messageId]);
+      return res.json({ success: true, action: 'unpinned' });
+    }
+    await run('INSERT INTO message_pins (message_id, pinned_by) VALUES ($1, $2)', [messageId, req.user.id]);
+    res.json({ success: true, action: 'pinned' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao fixar mensagem' });
+  }
+});
+
+app.get('/api/channels/:channelId/pins', authMiddleware, async (req, res) => {
+  try {
+    const channelId = parseInt(req.params.channelId);
+    const pins = await query(`
+      SELECT m.*, u.username, u.avatar_seed, mp.created_at as pinned_at, p.username as pinned_by_username
+      FROM message_pins mp
+      INNER JOIN messages m ON mp.message_id = m.id
+      INNER JOIN users u ON m.user_id = u.id
+      INNER JOIN users p ON mp.pinned_by = p.id
+      WHERE m.channel_id = $1
+      ORDER BY mp.created_at DESC
+    `, [channelId]);
+    res.json({ pins });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao buscar pins' });
+  }
+});
+
+// ─── Server Settings ─────────────────────────────────────────────────────
+app.put('/api/servers/:serverId', authMiddleware, async (req, res) => {
+  try {
+    const serverId = parseInt(req.params.serverId);
+    const srv = await queryOne('SELECT * FROM servers WHERE id = $1', [serverId]);
+    if (!srv) return res.status(404).json({ error: 'Servidor não encontrado' });
+    if (srv.owner_id !== req.user.id) return res.status(403).json({ error: 'Apenas o dono pode alterar configurações' });
+    const { name, description } = req.body;
+    if (name && (name.length < 2 || name.length > 50))
+      return res.status(400).json({ error: 'Nome deve ter entre 2 e 50 caracteres' });
+    if (name) await run('UPDATE servers SET name = $1 WHERE id = $2', [sanitizeHtml(name), serverId]);
+    if (description !== undefined) await run('UPDATE servers SET description = $1 WHERE id = $2', [sanitizeHtml(description), serverId]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar servidor' });
+  }
+});
+
+app.delete('/api/servers/:serverId', authMiddleware, async (req, res) => {
+  try {
+    const serverId = parseInt(req.params.serverId);
+    const srv = await queryOne('SELECT * FROM servers WHERE id = $1', [serverId]);
+    if (!srv) return res.status(404).json({ error: 'Servidor não encontrado' });
+    if (srv.owner_id !== req.user.id) return res.status(403).json({ error: 'Apenas o dono pode deletar o servidor' });
+    await run('DELETE FROM servers WHERE id = $1', [serverId]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao deletar servidor' });
+  }
+});
+
+app.delete('/api/servers/:serverId/leave', authMiddleware, async (req, res) => {
+  try {
+    const serverId = parseInt(req.params.serverId);
+    const srv = await queryOne('SELECT * FROM servers WHERE id = $1', [serverId]);
+    if (!srv) return res.status(404).json({ error: 'Servidor não encontrado' });
+    if (srv.owner_id === req.user.id) return res.status(400).json({ error: 'Dono não pode sair. Transfira a propriedade ou delete o servidor.' });
+    await run('DELETE FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, req.user.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao sair do servidor' });
+  }
+});
+
+app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (req, res) => {
+  try {
+    const serverId = parseInt(req.params.serverId);
+    const channelId = parseInt(req.params.channelId);
+    if (!(await isModerator(serverId, req.user.id)))
+      return res.status(403).json({ error: 'Sem permissão' });
+    await run('DELETE FROM channels WHERE id = $1 AND server_id = $2', [channelId, serverId]);
+    const channels = await getServerChannels(serverId);
+    res.json({ success: true, channels });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao deletar canal' });
+  }
+});
+
 app.put('/api/users/password', authMiddleware, async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -901,6 +994,24 @@ io.on('connection', (socket) => {
         console.error('Erro no reaction:', err);
       }
     })();
+  });
+
+  socket.on('message-edited', (data) => {
+    const user = connectedUsers.get(socket.id);
+    if (!user || !user.currentRoom) return;
+    socket.to(user.currentRoom).emit('message-edited', { messageId: data.messageId, content: data.content });
+  });
+
+  socket.on('message-deleted', (data) => {
+    const user = connectedUsers.get(socket.id);
+    if (!user || !user.currentRoom) return;
+    socket.to(user.currentRoom).emit('message-deleted', { messageId: data.messageId });
+  });
+
+  socket.on('message-pinned', (data) => {
+    const user = connectedUsers.get(socket.id);
+    if (!user || !user.currentRoom) return;
+    socket.to(user.currentRoom).emit('message-pinned', { messageId: data.messageId, action: data.action });
   });
 
   // ─── Presence ──────────────────────────────────────────────────────────────

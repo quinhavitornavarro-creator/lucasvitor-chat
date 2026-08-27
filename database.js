@@ -150,6 +150,17 @@ async function initDatabase() {
     );
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS message_pins (
+      id SERIAL PRIMARY KEY,
+      message_id INTEGER NOT NULL UNIQUE,
+      pinned_by INTEGER NOT NULL,
+      created_at TEXT DEFAULT NOW(),
+      FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+      FOREIGN KEY (pinned_by) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_channel_created ON messages(channel_id, created_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_messages_user ON messages(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_reactions_message ON reactions(message_id)`);
@@ -162,6 +173,8 @@ async function initDatabase() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_file_uploads_message ON file_uploads(message_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_message_pins_message ON message_pins(message_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_message_pins_channel ON message_pins(message_id)`);
 
   const defaultServer = await pool.query('SELECT id FROM servers LIMIT 1');
   if (defaultServer.rows.length === 0) {
