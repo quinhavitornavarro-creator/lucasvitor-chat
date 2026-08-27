@@ -2541,7 +2541,432 @@
         width: 4px;
       }
     }
-  </style>
+
+    /* ─── Settings Overlay ──────────────────────────────────────────── */
+
+    .settings-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9998;
+      display: flex;
+      background: var(--bg-deepest);
+      animation: fadeIn 0.2s ease;
+    }
+
+    .settings-overlay.hidden { display: none; }
+
+    .settings-sidebar {
+      width: 260px;
+      min-width: 260px;
+      background: var(--bg-deep);
+      display: flex;
+      flex-direction: column;
+      padding: 60px 6px 60px 20px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border-subtle);
+      position: relative;
+    }
+
+    .settings-sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+    }
+
+    .settings-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .settings-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .settings-user-info {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .settings-username {
+      font-weight: 600;
+      font-size: 0.9rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .settings-tag {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .settings-nav {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .settings-nav-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      padding: 16px 10px 6px;
+    }
+
+    .settings-nav-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 8px 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      text-align: left;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition-base);
+    }
+
+    .settings-nav-item:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .settings-nav-item.active {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .settings-close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      border: 2px solid var(--text-muted);
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-base);
+    }
+
+    .settings-close-btn:hover {
+      border-color: var(--text-primary);
+      color: var(--text-primary);
+    }
+
+    .settings-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 40px 60px;
+      max-width: 800px;
+    }
+
+    .settings-tab {
+      display: none;
+    }
+
+    .settings-tab.active {
+      display: block;
+    }
+
+    .settings-tab h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+    }
+
+    .settings-tab h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .settings-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-row-label {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .settings-row-value {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .settings-edit-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+    }
+
+    /* Toggle Switch */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--bg-elevated);
+      border-radius: 11px;
+      transition: var(--transition-base);
+    }
+
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      bottom: 3px;
+      background: var(--text-muted);
+      border-radius: 50%;
+      transition: var(--transition-base);
+    }
+
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--accent-green);
+    }
+
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(18px);
+      background: #fff;
+    }
+
+    /* Settings Slider */
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .settings-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--bg-elevated);
+      outline: none;
+    }
+
+    .settings-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-purple);
+      cursor: pointer;
+      border: 2px solid var(--bg-surface);
+      box-shadow: 0 0 4px rgba(0,0,0,0.3);
+    }
+
+    .slider-value {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* Profile Layout */
+    .profile-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+
+    .profile-card-preview {
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .profile-banner {
+      height: 80px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+    }
+
+    .profile-avatar-wrapper {
+      padding: 0 16px;
+      margin-top: -40px;
+    }
+
+    .profile-avatar-large {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      border: 5px solid var(--bg-surface);
+      overflow: hidden;
+    }
+
+    .profile-avatar-large img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-info {
+      padding: 12px 16px 20px;
+    }
+
+    .profile-info h3 {
+      margin-bottom: 2px;
+    }
+
+    /* Theme Options */
+    .theme-options {
+      display: flex;
+      gap: 12px;
+    }
+
+    .theme-option {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border: 2px solid var(--border-subtle);
+      background: transparent;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: var(--transition-base);
+    }
+
+    .theme-option.active,
+    .theme-option:hover {
+      border-color: var(--accent-purple);
+    }
+
+    .theme-preview {
+      width: 80px;
+      height: 60px;
+      border-radius: var(--radius-sm);
+    }
+
+    .dark-preview { background: linear-gradient(135deg, #0b0d17, #1a1d2e); }
+    .darker-preview { background: linear-gradient(135deg, #050505, #0f0f0f); }
+    .midnight-preview { background: linear-gradient(135deg, #0a0e1a, #161b2e); }
+
+    .theme-option span {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* Radio Options */
+    .radio-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background var(--transition-base);
+    }
+
+    .radio-option:hover {
+      background: var(--bg-elevated);
+    }
+
+    .radio-option input[type="radio"] {
+      margin-top: 4px;
+      accent-color: var(--accent-purple);
+    }
+
+    /* Mic Test Bars */
+    .mic-test-bars {
+      display: flex;
+      gap: 3px;
+      align-items: flex-end;
+      height: 24px;
+    }
+
+    .mic-bar {
+      width: 4px;
+      height: 4px;
+      background: var(--accent-green);
+      border-radius: 2px;
+      transition: height 0.1s ease;
+    }
+
+    /* Color picker */
+    .color-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .settings-overlay {
+        flex-direction: column;
+      }
+      .settings-sidebar {
+        width: 100%;
+        min-width: 0;
+        padding: 60px 12px 12px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border-right: none;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+      .settings-sidebar-header { display: none; }
+      .settings-nav { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; }
+      .settings-nav-label { display: none; }
+      .settings-nav-item { white-space: nowrap; font-size: 0.8rem; padding: 6px 10px; }
+      .settings-content { padding: 20px 16px; }
+      .profile-layout { grid-template-columns: 1fr; }
+    }
 </head>
 <body>
 
@@ -2922,43 +3347,202 @@
     </div>
   </div>
 
-  <!-- User Settings Modal -->
-  <div id="user-settings-modal" class="modal-backdrop hidden">
-    <div class="modal wide">
-      <div class="modal-header"><h2>Configuracoes da Conta</h2><button class="modal-close">✕</button></div>
-      <div class="modal-body">
-        <div style="display:flex;gap:16px;align-items:center;margin-bottom:24px">
-          <div id="profile-avatar-preview" class="user-avatar" style="width:64px;height:64px;font-size:1.5rem"></div>
+  <!-- User Settings Overlay -->
+  <div id="settings-overlay" class="settings-overlay hidden">
+    <div class="settings-sidebar">
+      <div class="settings-sidebar-header">
+        <div class="settings-avatar" id="settings-avatar"></div>
+        <div class="settings-user-info">
+          <span class="settings-username" id="settings-username"></span>
+          <span class="settings-tag" id="settings-tag"></span>
+        </div>
+      </div>
+      <div class="settings-nav">
+        <div class="settings-nav-label">Conta</div>
+        <button class="settings-nav-item active" data-settings-tab="account">👤 Informações da conta</button>
+        <button class="settings-nav-item" data-settings-tab="security">🔒 Senha e segurança</button>
+        <button class="settings-nav-item" data-settings-tab="status">🟢 Status da Conta</button>
+        <button class="settings-nav-label">Social</button>
+        <button class="settings-nav-item" data-settings-tab="profile">🎨 Perfil</button>
+        <button class="settings-nav-label">App</button>
+        <button class="settings-nav-item" data-settings-tab="voice">🎤 Voz e vídeo</button>
+        <button class="settings-nav-item" data-settings-tab="notifications">🔔 Notificações</button>
+        <button class="settings-nav-item" data-settings-tab="appearance">🎨 Aparência</button>
+        <button class="settings-nav-item" data-settings-tab="accessibility">♿ Acessibilidade</button>
+      </div>
+      <button class="settings-close-btn" id="settings-close-btn" title="Fechar (ESC)">✕</button>
+    </div>
+
+    <div class="settings-content">
+      <!-- Account Tab -->
+      <div class="settings-tab active" id="tab-account">
+        <h2>Informações da conta</h2>
+        <div class="settings-card">
+          <div class="settings-row"><span class="settings-row-label">Nome de usuário</span><span class="settings-row-value" id="settings-username-display"></span><button class="btn btn-secondary btn-sm" onclick="document.getElementById('edit-username-input').classList.toggle('hidden')">Editar</button></div>
+          <div id="edit-username-input" class="settings-edit-row hidden">
+            <input type="text" id="settings-username-input" class="form-input" placeholder="Novo nome de usuário">
+            <button class="btn btn-primary btn-sm" id="save-username-btn">Salvar</button>
+          </div>
+          <div class="settings-row"><span class="settings-row-label">E-mail</span><span class="settings-row-value" id="settings-email-display">••••••••@gmail.com</span><button class="btn btn-secondary btn-sm" onclick="document.getElementById('show-email').classList.toggle('hidden');this.textContent=this.textContent==='Mostrar'?'Ocultar':'Mostrar'">Mostrar</button></div>
+          <div id="show-email" class="settings-edit-row hidden"><span id="settings-email-full"></span></div>
+          <div class="settings-row"><span class="settings-row-label">Telefone</span><span class="settings-row-value" style="color:var(--text-muted)">Você ainda não adicionou um telefone.</span></div>
+        </div>
+
+        <h3 style="margin-top:24px">Avatar</h3>
+        <div class="settings-card" style="display:flex;gap:16px;align-items:center">
+          <div id="settings-avatar-preview" class="user-avatar" style="width:80px;height:80px;font-size:2rem"></div>
           <div>
-            <button class="btn btn-secondary btn-sm" id="upload-avatar-btn">Alterar Avatar</button>
-            <button class="btn btn-ghost btn-sm" id="remove-avatar-btn">Remover</button>
-            <input type="file" id="avatar-file-input" accept="image/*" class="hidden">
+            <button class="btn btn-primary btn-sm" id="settings-upload-avatar-btn">Alterar Avatar</button>
+            <button class="btn btn-ghost btn-sm" id="settings-remove-avatar-btn" style="margin-left:8px">Remover</button>
+            <input type="file" id="settings-avatar-input" accept="image/*" class="hidden">
+            <p style="color:var(--text-muted);font-size:0.75rem;margin-top:8px">Recomendado: 128x128px, PNG ou JPG</p>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Status</label>
-          <select id="user-status-select" class="form-input form-select">
-            <option value="online">Online</option>
-            <option value="idle">Ausente</option>
-            <option value="dnd">Nao Perturbe</option>
-            <option value="offline">Invisivel</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Status Personalizado</label>
-          <input type="text" id="custom-status-input" class="form-input" placeholder="O que voce esta fazendo?">
-        </div>
-        <hr style="border-color:var(--border-subtle);margin:16px 0">
-        <div class="form-group">
-          <label class="form-label">Alterar Senha</label>
-          <input type="password" id="current-password" class="form-input" placeholder="Senha atual" style="margin-bottom:8px">
-          <input type="password" id="new-password" class="form-input" placeholder="Nova senha">
-        </div>
-        <div id="user-settings-error" class="form-error hidden"></div>
+
+        <h3 style="margin-top:24px">Membro desde</h3>
+        <div class="settings-card"><span id="settings-member-since" style="color:var(--text-muted)"></span></div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary modal-cancel">Cancelar</button>
-        <button class="btn btn-primary" id="save-user-settings">Salvar</button>
+
+      <!-- Security Tab -->
+      <div class="settings-tab" id="tab-security">
+        <h2>Senha e segurança</h2>
+        <div class="settings-card">
+          <h3 style="margin-bottom:16px">Alterar senha</h3>
+          <div class="form-group"><label class="form-label">Senha atual</label><input type="password" id="settings-current-pw" class="form-input" placeholder="Digite sua senha atual"></div>
+          <div class="form-group"><label class="form-label">Nova senha</label><input type="password" id="settings-new-pw" class="form-input" placeholder="Digite a nova senha"></div>
+          <div class="form-group"><label class="form-label">Confirmar nova senha</label><input type="password" id="settings-confirm-pw" class="form-input" placeholder="Confirme a nova senha"></div>
+          <div id="settings-security-error" class="form-error hidden"></div>
+          <button class="btn btn-primary" id="settings-change-pw-btn" style="margin-top:16px">Alterar Senha</button>
+        </div>
+      </div>
+
+      <!-- Status Tab -->
+      <div class="settings-tab" id="tab-status">
+        <h2>Status da Conta</h2>
+        <div class="settings-card">
+          <div class="settings-row"><span class="settings-row-label">Status</span><select id="settings-status-select" class="form-input form-select" style="width:200px"><option value="online">Online</option><option value="idle">Ausente</option><option value="dnd">Não Perturbe</option><option value="offline">Invisível</option></select></div>
+          <div class="settings-row" style="flex-direction:column;align-items:flex-start"><span class="settings-row-label">Status personalizado</span><input type="text" id="settings-custom-status" class="form-input" placeholder="O que você está fazendo?" style="width:100%;margin-top:8px"></div>
+        </div>
+        <button class="btn btn-primary" id="settings-save-status-btn" style="margin-top:16px">Salvar Status</button>
+      </div>
+
+      <!-- Profile Tab -->
+      <div class="settings-tab" id="tab-profile">
+        <h2>Perfil</h2>
+        <div class="profile-layout">
+          <div class="profile-edit-panel">
+            <div class="settings-card">
+              <h3 style="margin-bottom:12px">Descrição</h3>
+              <textarea id="settings-bio-input" class="form-input" rows="4" placeholder="Descreva-se como um personagem de jogo" style="resize:vertical"></textarea>
+              <button class="btn btn-primary btn-sm" id="settings-save-bio-btn" style="margin-top:12px">Salvar Bio</button>
+            </div>
+            <div class="settings-card" style="margin-top:16px">
+              <h3 style="margin-bottom:12px">Cor do perfil</h3>
+              <div class="color-picker-row">
+                <input type="color" id="settings-profile-color" value="#7c3aed" style="width:48px;height:36px;border:none;cursor:pointer;border-radius:var(--radius-sm)">
+                <span id="settings-color-display" style="color:var(--text-muted);font-size:0.875rem">#7c3aed</span>
+              </div>
+              <button class="btn btn-primary btn-sm" id="settings-save-color-btn" style="margin-top:12px">Salvar Cor</button>
+            </div>
+          </div>
+          <div class="profile-preview">
+            <div class="profile-card-preview" id="profile-card-preview">
+              <div class="profile-banner" id="profile-banner-preview"></div>
+              <div class="profile-avatar-wrapper">
+                <div class="profile-avatar-large" id="profile-avatar-large-preview"></div>
+              </div>
+              <div class="profile-info">
+                <h3 id="preview-username"></h3>
+                <p id="preview-tag" style="color:var(--text-muted);font-size:0.8rem"></p>
+                <p id="preview-bio" style="margin-top:8px;font-size:0.85rem;color:var(--text-secondary)"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Voice & Video Tab -->
+      <div class="settings-tab" id="tab-voice">
+        <h2>Voz e vídeo</h2>
+        <div class="settings-card">
+          <h3 style="margin-bottom:16px">🎤 Microfone</h3>
+          <select id="settings-mic-select" class="form-input form-select" style="width:100%"></select>
+          <div class="volume-control" style="margin-top:16px">
+            <label class="form-label">Volume do Microfone</label>
+            <div class="slider-row"><input type="range" id="settings-mic-volume" min="0" max="100" value="100" class="settings-slider"><span id="settings-mic-volume-val" class="slider-value">100%</span></div>
+          </div>
+        </div>
+        <div class="settings-card" style="margin-top:16px">
+          <h3 style="margin-bottom:16px">🎧 Alto-falante</h3>
+          <select id="settings-speaker-select" class="form-input form-select" style="width:100%"></select>
+          <div class="volume-control" style="margin-top:16px">
+            <label class="form-label">Volume do Alto-falante</label>
+            <div class="slider-row"><input type="range" id="settings-speaker-volume" min="0" max="100" value="100" class="settings-slider"><span id="settings-speaker-volume-val" class="slider-value">100%</span></div>
+          </div>
+        </div>
+        <div class="settings-card" style="margin-top:16px">
+          <h3 style="margin-bottom:16px">Teste do microfone</h3>
+          <button class="btn btn-primary" id="settings-mic-test-btn">🎤 Iniciar teste</button>
+          <div class="mic-test-bars" id="settings-mic-bars" style="margin-top:12px;display:none">
+            <div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div>
+            <div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div><div class="mic-bar"></div>
+          </div>
+        </div>
+        <div class="settings-card" style="margin-top:16px">
+          <h3 style="margin-bottom:16px">Perfil de entrada</h3>
+          <label class="radio-option"><input type="radio" name="input-profile" value="voice-isolation"> <span><strong>Isolamento de Voz</strong><br><small style="color:var(--text-muted)">Só a sua linda voz: deixe o Discord equalizar o ruído</small></span></label>
+          <label class="radio-option"><input type="radio" name="input-profile" value="studio"> <span><strong>Estúdio</strong><br><small style="color:var(--text-muted)">Áudio puro: microfone aberto e sem processamento</small></span></label>
+          <label class="radio-option"><input type="radio" name="input-profile" value="custom" checked> <span><strong>Personalizado</strong><br><small style="color:var(--text-muted)">Modo avançado: me dê de todos os botões e mostradores!</small></span></label>
+        </div>
+        <div class="settings-card" style="margin-top:16px">
+          <div class="settings-row"><span class="settings-row-label">Supressão de ruído</span><select id="settings-noise-suppress" class="form-input form-select" style="width:160px"><option value="none">Nenhuma</option><option value="krisp" selected>Krisp</option></select></div>
+          <div class="settings-row"><span class="settings-row-label">Cancelamento de eco</span><label class="toggle-switch"><input type="checkbox" id="settings-echo-cancel" checked><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Ajuste automático de sensibilidade</span><label class="toggle-switch"><input type="checkbox" id="settings-auto-gain"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+
+      <!-- Notifications Tab -->
+      <div class="settings-tab" id="tab-notifications">
+        <h2>Notificações</h2>
+        <div class="settings-card">
+          <div class="settings-row"><span class="settings-row-label">Notificações de mensagem</span><label class="toggle-switch"><input type="checkbox" id="settings-notif-msg" checked><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Sons de notificação</span><label class="toggle-switch"><input type="checkbox" id="settings-notif-sound" checked><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Notificações de menção</span><label class="toggle-switch"><input type="checkbox" id="settings-notif-mention" checked><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Indicador de voz na sidebar</span><label class="toggle-switch"><input type="checkbox" id="settings-voice-indicator" checked><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+
+      <!-- Appearance Tab -->
+      <div class="settings-tab" id="tab-appearance">
+        <h2>Aparência</h2>
+        <div class="settings-card">
+          <h3 style="margin-bottom:16px">Tema</h3>
+          <div class="theme-options">
+            <button class="theme-option active" data-theme="dark" id="theme-dark"><div class="theme-preview dark-preview"></div><span>Escuro</span></button>
+            <button class="theme-option" data-theme="darker" id="theme-darker"><div class="theme-preview darker-preview"></div><span>Escuro Plus</span></button>
+            <button class="theme-option" data-theme="midnight" id="theme-midnight"><div class="theme-preview midnight-preview"></div><span>Meia-noite</span></button>
+          </div>
+        </div>
+        <div class="settings-card" style="margin-top:16px">
+          <h3 style="margin-bottom:16px">Tamanho da fonte</h3>
+          <div class="slider-row"><input type="range" id="settings-font-size" min="12" max="24" value="16" class="settings-slider"><span id="settings-font-size-val" class="slider-value">16px</span></div>
+        </div>
+        <div class="settings-card" style="margin-top:16px">
+          <div class="settings-row"><span class="settings-row-label">Compactar mensagens</span><label class="toggle-switch"><input type="checkbox" id="settings-compact-msg"><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Mostrar avatares no chat</span><label class="toggle-switch"><input type="checkbox" id="settings-show-avatars" checked><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+
+      <!-- Accessibility Tab -->
+      <div class="settings-tab" id="tab-accessibility">
+        <h2>Acessibilidade</h2>
+        <div class="settings-card">
+          <div class="settings-row"><span class="settings-row-label">Reduzir animações</span><label class="toggle-switch"><input type="checkbox" id="settings-reduce-motion"><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Alto contraste</span><label class="toggle-switch"><input type="checkbox" id="settings-high-contrast"><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Legendas automáticas</span><label class="toggle-switch"><input type="checkbox" id="settings-captions"><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Descrever imagens</span><label class="toggle-switch"><input type="checkbox" id="settings-describe-img"><span class="toggle-slider"></span></label></div>
+          <div class="settings-row"><span class="settings-row-label">Modo daltônico</span><select id="settings-colorblind" class="form-input form-select" style="width:200px"><option value="none">Desligado</option><option value="protanopia">Protanopia</option><option value="deuteranopia">Deuteranopia</option><option value="tritanopia">Tritanopia</option></select></div>
+        </div>
       </div>
     </div>
   </div>
@@ -4223,30 +4807,199 @@ $('remove-avatar-btn')?.addEventListener('click',async()=>{
 
 // ─── User Settings ─────────────────────────────────────────────────────────
 
-$('user-settings-btn')?.addEventListener('click',()=>{
-  if(currentUser){
-    $('profile-avatar-preview').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="" style="width:100%;height:100%;object-fit:cover">';
-    $('profile-avatar-preview').style.background=generateColor(currentUser.username||'');
-  }
-  showModal('user-settings-modal');
+$('user-settings-btn')?.addEventListener('click',openSettings);
+
+function openSettings(){
+  if(!currentUser) return;
+  const overlay=$('settings-overlay');
+  if(!overlay) return;
+  overlay.classList.remove('hidden');
+  document.body.style.overflow='hidden';
+  loadAudioDevices();
+  $('settings-avatar').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="">';
+  $('settings-username').textContent=currentUser.username||'';
+  $('settings-tag').textContent='#'+(currentUser.id||'');
+  $('settings-username-display').textContent=currentUser.username||'';
+  $('settings-email-display').textContent='••••••••@gmail.com';
+  $('settings-email-full').textContent=currentUser.email||'';
+  $('settings-member-since').textContent=currentUser.created_at?new Date(currentUser.created_at).toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'';
+  updateProfilePreview();
+}
+
+function closeSettings(){
+  const overlay=$('settings-overlay');
+  if(overlay) overlay.classList.add('hidden');
+  document.body.style.overflow='';
+}
+
+$('settings-close-btn')?.addEventListener('click',closeSettings);
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('settings-overlay')?.classList.contains('hidden')) closeSettings(); });
+
+// Settings nav
+document.querySelectorAll('.settings-nav-item').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.settings-nav-item').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.settings-tab').forEach(t=>t.classList.remove('active'));
+    const tab=document.getElementById('tab-'+btn.dataset.settingsTab);
+    if(tab) tab.classList.add('active');
+  });
 });
 
-$('save-user-settings')?.addEventListener('click',async()=>{
+// Avatar upload in settings
+$('settings-upload-avatar-btn')?.addEventListener('click',()=>$('settings-avatar-input')?.click());
+$('settings-avatar-input')?.addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const fd=new FormData(); fd.append('avatar',file);
   try{
-    const status=$('user-status-select')?.value;
-    const customStatus=$('custom-status-input')?.value;
+    const d=await fetch('/api/users/avatar',{method:'POST',headers:{'Authorization':'Bearer '+getToken()},body:fd}).then(r=>r.json());
+    if(d.avatarUrl){ currentUser.avatarSeed=d.avatarUrl; updateUserUI(); updateProfilePreview(); showToast('success','Avatar','Avatar atualizado!'); }
+    else showToast('error','Erro',d.error||'Falha ao enviar avatar');
+  }catch(e){ showToast('error','Erro',e.message); }
+});
+
+$('settings-remove-avatar-btn')?.addEventListener('click',async()=>{
+  try{
+    const d=await apiCall('/api/users/avatar',{method:'DELETE'});
+    if(d.success){ currentUser.avatarSeed=currentUser.username; updateUserUI(); updateProfilePreview(); showToast('info','Avatar','Avatar removido'); }
+  }catch(e){ showToast('error','Erro',e.message); }
+});
+
+// Save username
+$('save-username-btn')?.addEventListener('click',async()=>{
+  const newUsername=$('settings-username-input')?.value?.trim();
+  if(!newUsername) return;
+  try{
+    const d=await apiCall('/api/users/username',{method:'PUT',body:JSON.stringify({username:newUsername})});
+    if(d.user){ currentUser.username=d.user.username; updateUserUI(); $('settings-username-display').textContent=d.user.username; $('settings-username').textContent=d.user.username; $('edit-username-input').classList.add('hidden'); showToast('success','Salvo','Nome de usuário atualizado!'); }
+    else showToast('error','Erro',d.error||'Falha ao salvar');
+  }catch(e){ showToast('error','Erro',e.message); }
+});
+
+// Save status
+$('settings-save-status-btn')?.addEventListener('click',async()=>{
+  try{
+    const status=$('settings-status-select')?.value;
+    const customStatus=$('settings-custom-status')?.value;
     await apiCall('/api/users/status',{method:'PUT',body:JSON.stringify({status,customStatus})});
     socket?.emit('set-status',{status,customStatus});
-
-    const currentPw=$('current-password')?.value;
-    const newPw=$('new-password')?.value;
-    if(currentPw&&newPw){
-      await apiCall('/api/users/password',{method:'PUT',body:JSON.stringify({currentPassword:currentPw,newPassword:newPw})});
-      showToast('success','Senha','Senha alterada!');
-    }
-    hideModal('user-settings-modal');
-    showToast('success','Salvo','Configurações atualizadas');
+    showToast('success','Salvo','Status atualizado!');
   }catch(e){ showToast('error','Erro',e.message); }
+});
+
+// Change password
+$('settings-change-pw-btn')?.addEventListener('click',async()=>{
+  const cur=$('settings-current-pw')?.value;
+  const nw=$('settings-new-pw')?.value;
+  const cf=$('settings-confirm-pw')?.value;
+  const errEl=$('settings-security-error');
+  if(!cur||!nw){ errEl.textContent='Preencha todos os campos'; errEl.classList.remove('hidden'); return; }
+  if(nw!==cf){ errEl.textContent='As senhas não coincidem'; errEl.classList.remove('hidden'); return; }
+  if(nw.length<6){ errEl.textContent='Senha deve ter pelo menos 6 caracteres'; errEl.classList.remove('hidden'); return; }
+  try{
+    await apiCall('/api/users/password',{method:'PUT',body:JSON.stringify({currentPassword:cur,newPassword:nw})});
+    showToast('success','Senha','Senha alterada!');
+    $('settings-current-pw').value=''; $('settings-new-pw').value=''; $('settings-confirm-pw').value='';
+    errEl.classList.add('hidden');
+  }catch(e){ errEl.textContent=e.message; errEl.classList.remove('hidden'); }
+});
+
+// Bio
+$('settings-save-bio-btn')?.addEventListener('click',async()=>{
+  const bio=$('settings-bio-input')?.value;
+  try{
+    await apiCall('/api/users/profile',{method:'PUT',body:JSON.stringify({bio})});
+    showToast('success','Salvo','Bio atualizada!');
+    updateProfilePreview();
+  }catch(e){ showToast('error','Erro',e.message); }
+});
+
+// Profile color
+$('settings-profile-color')?.addEventListener('input',e=>{
+  $('settings-color-display').textContent=e.target.value;
+});
+$('settings-save-color-btn')?.addEventListener('click',async()=>{
+  const color=$('settings-profile-color')?.value;
+  try{
+    await apiCall('/api/users/profile',{method:'PUT',body:JSON.stringify({profileColor:color})});
+    showToast('success','Salvo','Cor do perfil atualizada!');
+    updateProfilePreview();
+  }catch(e){ showToast('error','Erro',e.message); }
+});
+
+function updateProfilePreview(){
+  if(!currentUser) return;
+  $('preview-username').textContent=currentUser.username||'';
+  $('preview-tag').textContent=currentUser.username+'#'+currentUser.id;
+  $('preview-bio').textContent=currentUser.bio||'';
+  $('settings-bio-input').value=currentUser.bio||'';
+  $('settings-avatar-preview').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="" style="width:100%;height:100%;object-fit:cover">';
+  $('settings-avatar-preview').style.background=generateColor(currentUser.username||'');
+  $('profile-avatar-large-preview').innerHTML='<img src="'+getAvatarUrl(currentUser.avatarSeed)+'" alt="" style="width:100%;height:100%;object-fit:cover">';
+  $('profile-avatar-large-preview').style.background=generateColor(currentUser.username||'');
+}
+
+// Voice & Video settings
+$('settings-mic-volume')?.addEventListener('input',e=>{ $('settings-mic-volume-val').textContent=e.target.value+'%'; });
+$('settings-speaker-volume')?.addEventListener('input',e=>{ $('settings-speaker-volume-val').textContent=e.target.value+'%'; });
+
+let micTestStream=null, micTestInterval=null;
+$('settings-mic-test-btn')?.addEventListener('click',async()=>{
+  if(micTestStream){
+    micTestStream.getTracks().forEach(t=>t.stop());
+    micTestStream=null;
+    clearInterval(micTestInterval);
+    $('settings-mic-bars').style.display='none';
+    $('settings-mic-test-btn').textContent='🎤 Iniciar teste';
+    return;
+  }
+  try{
+    micTestStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    $('settings-mic-bars').style.display='flex';
+    $('settings-mic-test-btn').textContent='⏹ Parar teste';
+    const ctx=new AudioContext();
+    const src=ctx.createMediaStreamSource(micTestStream);
+    const analyser=ctx.createAnalyser();
+    analyser.fftSize=64;
+    src.connect(analyser);
+    const data=new Uint8Array(analyser.frequencyBinCount);
+    const bars=$('settings-mic-bars').querySelectorAll('.mic-bar');
+    micTestInterval=setInterval(()=>{
+      analyser.getByteFrequencyData(data);
+      const avg=data.reduce((a,b)=>a+b,0)/data.length;
+      bars.forEach((bar,i)=>{
+        const h=Math.max(4,Math.min(24,(avg/255)*24*(1-Math.abs(i-bars.length/2)/(bars.length/2))));
+        bar.style.height=h+'px';
+      });
+    },50);
+  }catch(e){ showToast('error','Erro','Permissão de microfone negada'); }
+});
+
+// Enumerate devices
+async function loadAudioDevices(){
+  try{
+    const devices=await navigator.mediaDevices.enumerateDevices();
+    const mics=devices.filter(d=>d.kind==='audioinput');
+    const speakers=devices.filter(d=>d.kind==='audiooutput');
+    const micSelect=$('settings-mic-select');
+    const spkSelect=$('settings-speaker-select');
+    if(micSelect){ micSelect.innerHTML=''; mics.forEach(d=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||'Microfone '+(micSelect.options.length+1); micSelect.appendChild(o); }); }
+    if(spkSelect){ spkSelect.innerHTML=''; speakers.forEach(d=>{ const o=document.createElement('option'); o.value=d.deviceId; o.textContent=d.label||'Alto-falante '+(spkSelect.options.length+1); spkSelect.appendChild(o); }); }
+  }catch(e){}
+}
+
+// Font size
+$('settings-font-size')?.addEventListener('input',e=>{
+  $('settings-font-size-val').textContent=e.target.value+'px';
+  document.documentElement.style.fontSize=e.target.value+'px';
+});
+
+// Appearance themes
+document.querySelectorAll('.theme-option').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.theme-option').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
 });
 
 $('home-btn')?.addEventListener('click',()=>{
@@ -4609,8 +5362,6 @@ function stopScreenShare(){
   socket?.emit('screen-share-stopped');
   $('voice-video-btn')?.classList.remove('active');
 }
-
-$('user-settings-btn')?.addEventListener('click',()=>{});
 
 async function toggleCamera(){
   if(!currentVoiceChannelId) return;

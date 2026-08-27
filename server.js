@@ -222,7 +222,7 @@ async function authMiddleware(req, res, next) {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await findById(decoded.userId);
     if (!user) return res.status(401).json({ error: 'Usuário não encontrado' });
-    req.user = { id: user.id, username: user.username, email: user.email, avatarSeed: user.avatar_seed };
+    req.user = { id: user.id, username: user.username, email: user.email, avatarSeed: user.avatar_seed, status: user.status, customStatus: user.custom_status, bio: user.bio, profileColor: user.profile_color, created_at: user.created_at };
     next();
   } catch (error) {
     res.status(401).json({ error: 'Token inválido' });
@@ -646,11 +646,90 @@ app.delete('/api/avatar', authMiddleware, async (req, res) => {
   }
 });
 
+// ─── User Profile Routes ───────────────────────────────────────────────────
+
+app.post('/api/users/avatar', authMiddleware, avatarUpload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada' });
+    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
+    await run('UPDATE users SET avatar_seed = $1 WHERE id = $2', [avatarUrl, req.user.id]);
+    const sockets = userSockets.get(req.user.id);
+    if (sockets) {
+      for (const sid of sockets) {
+        const s = io.sockets.sockets.get(sid);
+        if (s && s.user) s.user.avatarSeed = avatarUrl;
+      }
+    }
+    res.json({ success: true, avatarUrl });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar avatar' });
+  }
+});
+
+app.delete('/api/users/avatar', authMiddleware, async (req, res) => {
+  try {
+    const user = await queryOne('SELECT avatar_seed FROM users WHERE id = $1', [req.user.id]);
+    if (user && user.avatar_seed && user.avatar_seed.startsWith('/uploads/avatars/')) {
+      const filePath = path.join(__dirname, 'public', user.avatar_seed);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    const newSeed = 'avatar_' + Date.now();
+    await run('UPDATE users SET avatar_seed = $1 WHERE id = $2', [newSeed, req.user.id]);
+    const sockets = userSockets.get(req.user.id);
+    if (sockets) {
+      for (const sid of sockets) {
+        const s = io.sockets.sockets.get(sid);
+        if (s && s.user) s.user.avatarSeed = newSeed;
+      }
+    }
+    res.json({ success: true, avatarUrl: null });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao remover avatar' });
+  }
+});
+
+app.put('/api/users/username', authMiddleware, async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username || username.trim().length < 2) {
+      return res.status(400).json({ error: 'Nome de usuário deve ter pelo menos 2 caracteres' });
+    }
+    const existing = await queryOne('SELECT id FROM users WHERE username = $1 AND id != $2', [username.trim(), req.user.id]);
+    if (existing) return res.status(400).json({ error: 'Nome de usuário já está em uso' });
+    await run('UPDATE users SET username = $1, updated_at = NOW() WHERE id = $2', [username.trim(), req.user.id]);
+    const sockets = userSockets.get(req.user.id);
+    if (sockets) {
+      for (const sid of sockets) {
+        const s = io.sockets.sockets.get(sid);
+        if (s && s.user) s.user.username = username.trim();
+      }
+    }
+    res.json({ success: true, user: { username: username.trim() } });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar nome de usuário' });
+  }
+});
+
+app.put('/api/users/profile', authMiddleware, async (req, res) => {
+  try {
+    const { bio, profileColor } = req.body;
+    if (bio !== undefined) {
+      await run('UPDATE users SET bio = $1, updated_at = NOW() WHERE id = $2', [sanitizeHtml(bio).substring(0, 500), req.user.id]);
+    }
+    if (profileColor !== undefined) {
+      await run('UPDATE users SET profile_color = $1, updated_at = NOW() WHERE id = $2', [profileColor, req.user.id]);
+    }
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao atualizar perfil' });
+  }
+});
+
 app.get('/api/servers/:serverId/members', authMiddleware, async (req, res) => {
   try {
     const serverId = parseInt(req.params.serverId);
     const members = await query(`
-      SELECT u.id, u.username, u.avatar_seed, u.status, sm.role, sm.nickname
+      SELECT u.id, u.username, u.avatar_seed, u.status, u.bio, u.profile_color, sm.role, sm.nickname
       FROM server_members sm
       INNER JOIN users u ON sm.user_id = u.id
       WHERE sm.server_id = $1

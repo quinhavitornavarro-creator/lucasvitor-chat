@@ -20,10 +20,15 @@ async function initDatabase() {
       avatar_seed TEXT DEFAULT '',
       status TEXT DEFAULT 'online' CHECK(status IN ('online','idle','dnd','offline')),
       custom_status TEXT DEFAULT '',
+      bio TEXT DEFAULT '',
+      profile_color TEXT DEFAULT '#7c3aed',
       created_at TEXT DEFAULT NOW(),
       updated_at TEXT DEFAULT NOW()
     );
   `);
+
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT ''`);
+  await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_color TEXT DEFAULT '#7c3aed'`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS refresh_tokens (
