@@ -5383,6 +5383,18 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
     }
     if(videoEl) videoEl.srcObject=remoteStream;
 
+    const audioTracks=remoteStream.getAudioTracks();
+    if(audioTracks.length>0){
+      const existingAudio=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
+      if(!existingAudio){
+        const audioEl=document.createElement('audio');
+        audioEl.autoplay=true;
+        audioEl.srcObject=remoteStream;
+        const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
+        if(card) card.appendChild(audioEl);
+      }
+    }
+
     if(!peers[socketId].analyser){
       const ctx=getAudioCtx();
       const src=ctx.createMediaStreamSource(remoteStream);
@@ -5510,15 +5522,23 @@ $('voice-video-btn')?.addEventListener('click',async()=>{
   if(!currentVoiceChannelId) return;
   if(isScreenSharing){ stopScreenShare(); return; }
   try{
-    screenStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:false});
+    screenStream=await navigator.mediaDevices.getDisplayMedia({video:true,audio:true});
     isScreenSharing=true;
     screenStream.getVideoTracks()[0].onended=()=>{ stopScreenShare(); };
+
+    const screenAudioTrack=screenStream.getAudioTracks()[0]||null;
 
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
       const sender=peer.pc.getSenders().find(s=>s.track?.kind==='video');
       if(sender) await sender.replaceTrack(screenStream.getVideoTracks()[0]);
       else peer.pc.addTrack(screenStream.getVideoTracks()[0],screenStream);
+
+      if(screenAudioTrack){
+        const audioSender=peer.pc.getSenders().find(s=>s.track?.kind==='audio'&&!s.track?.label?.startsWith('screen'));
+        if(audioSender) await audioSender.replaceTrack(screenAudioTrack);
+        else peer.pc.addTrack(screenAudioTrack,screenStream);
+      }
 
       try{
         const offer=await peer.pc.createOffer();
@@ -5530,7 +5550,8 @@ $('voice-video-btn')?.addEventListener('click',async()=>{
     $('voice-video-btn')?.classList.add('active');
     $('voice-share-btn')?.classList.add('active');
     addLocalScreenCard(screenStream);
-    showToast('info','Screen Share','Compartilhamento iniciado');
+    const hasAudio=screenStream.getAudioTracks().length>0;
+    showToast('info','Screen Share',hasAudio?'Compartilhamento com áudio iniciado':'Compartilhamento iniciado');
   }catch(e){ console.error('screen share error',e); }
 });
 
@@ -5544,13 +5565,22 @@ function stopScreenShare(){
 
   for(const [sid,peer] of Object.entries(peers)){
     if(!peer.pc) continue;
-    const sender=peer.pc.getSenders().find(s=>s.track?.kind==='video');
+    const videoSender=peer.pc.getSenders().find(s=>s.track?.kind==='video');
     if(isCameraOn&&cameraStream){
-      if(sender) sender.replaceTrack(cameraStream.getVideoTracks()[0]);
+      if(videoSender) videoSender.replaceTrack(cameraStream.getVideoTracks()[0]);
       else peer.pc.addTrack(cameraStream.getVideoTracks()[0],cameraStream);
     } else {
-      if(sender) sender.replaceTrack(null);
+      if(videoSender) videoSender.replaceTrack(null);
     }
+
+    if(localStream){
+      const micTrack=localStream.getAudioTracks()[0];
+      if(micTrack){
+        const audioSender=peer.pc.getSenders().find(s=>s.track?.kind==='audio');
+        if(audioSender) audioSender.replaceTrack(micTrack);
+      }
+    }
+
     try{
       peer.pc.createOffer().then(offer=>peer.pc.setLocalDescription(offer).then(()=>{
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
