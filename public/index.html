@@ -3133,17 +3133,6 @@
   </style>
 </head>
 <body>
-<script>
-window.__nxLoadTime=Date.now();
-window.onerror=function(m,s,l,c,e){
-  document.title='ERR L'+l+': '+m;
-  var d=document.createElement('div');
-  d.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#f00;color:#fff;padding:10px;z-index:99999;font:12px/1.4 monospace;white-space:pre-wrap;max-height:200px;overflow:auto';
-  d.textContent='[NX ERROR] Line '+l+': '+m;
-  document.body.appendChild(d);
-};
-window.addEventListener('load',function(){console.log('[NX] Page loaded in '+(Date.now()-window.__nxLoadTime)+'ms');});
-</script>
 
   <!-- ==========================================
        AUTH SCREEN
@@ -3174,9 +3163,9 @@ window.addEventListener('load',function(){console.log('[NX] Page loaded in '+(Da
           <p>Compartilhe arquivos e trabalhe junto em tempo real.</p>
         </div>
       </div>
-      <button id="landing-cta" class="btn btn-primary btn-lg btn-block" onclick="document.getElementById('landing-page').classList.add('hidden');document.getElementById('auth-card').classList.remove('hidden');document.querySelectorAll('.auth-tab').forEach(function(t){t.classList.remove('active')});document.querySelector('.auth-tab[data-tab=\"login\"]').classList.add('active');document.getElementById('login-form').classList.remove('hidden');document.getElementById('register-form').classList.add('hidden');document.getElementById('forgot-form').classList.add('hidden');document.getElementById('reset-form').classList.add('hidden');">Comecar Agora</button>
+      <button id="landing-cta" class="btn btn-primary btn-lg btn-block">Comecar Agora</button>
       <p style="text-align:center;margin-top:16px;color:var(--text-muted);font-size:0.875rem">
-        Ja tem conta? <a href="#" id="show-login-link" onclick="event.preventDefault();document.getElementById('landing-page').classList.add('hidden');document.getElementById('auth-card').classList.remove('hidden');document.querySelectorAll('.auth-tab').forEach(function(t){t.classList.remove('active')});document.querySelector('.auth-tab[data-tab=\"login\"]').classList.add('active');document.getElementById('login-form').classList.remove('hidden');document.getElementById('register-form').classList.add('hidden');document.getElementById('forgot-form').classList.add('hidden');document.getElementById('reset-form').classList.add('hidden');">Fazer login</a>
+        Ja tem conta? <a href="#" id="show-login-link">Fazer login</a>
       </p>
     </div>
 
@@ -5839,20 +5828,8 @@ document.addEventListener('keydown',e=>{
 });
 
 // ─── Init ──────────────────────────────────────────────────────────────────
-console.log('[NX] Script loaded OK');
-
-window.onerror=function(msg,url,line,col,err){
-  console.error('[NX] JS Error:',msg,'at line',line);
-  try{
-    const c=document.createElement('div');
-    c.style.cssText='position:fixed;bottom:0;left:0;right:0;background:red;color:#fff;padding:8px;z-index:99999;font-size:12px;font-family:monospace';
-    c.textContent='[NX Error] L'+line+': '+msg;
-    document.body.appendChild(c);
-  }catch(e){}
-};
 
 checkAuth();
-console.log('[NX] checkAuth called');
 
 })();
 </script>
