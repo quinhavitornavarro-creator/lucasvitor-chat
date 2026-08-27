@@ -5356,43 +5356,43 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
 
   const remoteStream=new MediaStream();
   pc.ontrack=e=>{
-    e.streams[0]?.getTracks().forEach(track=>remoteStream.addTrack(track));
-    let videoEl=document.querySelector('[data-voice-socket="'+socketId+'"] video');
-    if(!videoEl){
-      const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
-      if(card){
-        videoEl=document.createElement('video');
-        videoEl.autoplay=true;
-        videoEl.playsInline=true;
-        videoEl.muted=true;
-        videoEl.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:var(--radius-md)';
-        card.prepend(videoEl);
-        if(!card.querySelector('.video-fullscreen-btn')){
-          const fsBtn=document.createElement('button');
-          fsBtn.className='video-fullscreen-btn';
-          fsBtn.title='Tela cheia';
-          fsBtn.innerHTML='⛶';
-          fsBtn.addEventListener('click',ev=>{
-            ev.stopPropagation();
-            const name=card.querySelector('.video-name')?.textContent||'Remoto';
-            openFullscreen(videoEl,name);
-          });
-          card.appendChild(fsBtn);
+    const track=e.track;
+    if(track.kind==='video'){
+      let videoEl=document.querySelector('[data-voice-socket="'+socketId+'"] video');
+      if(!videoEl){
+        const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
+        if(card){
+          videoEl=document.createElement('video');
+          videoEl.autoplay=true;
+          videoEl.playsInline=true;
+          videoEl.muted=true;
+          videoEl.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:var(--radius-md)';
+          card.prepend(videoEl);
+          if(!card.querySelector('.video-fullscreen-btn')){
+            const fsBtn=document.createElement('button');
+            fsBtn.className='video-fullscreen-btn';
+            fsBtn.title='Tela cheia';
+            fsBtn.innerHTML='⛶';
+            fsBtn.addEventListener('click',ev=>{
+              ev.stopPropagation();
+              const name=card.querySelector('.video-name')?.textContent||'Remoto';
+              openFullscreen(videoEl,name);
+            });
+            card.appendChild(fsBtn);
+          }
         }
       }
+      if(videoEl&&e.streams[0]) videoEl.srcObject=e.streams[0];
     }
-    if(videoEl) videoEl.srcObject=remoteStream;
-
-    const audioTracks=remoteStream.getAudioTracks();
-    if(audioTracks.length>0){
-      const existingAudio=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
-      if(!existingAudio){
-        const audioEl=document.createElement('audio');
+    if(track.kind==='audio'){
+      let audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
+      if(!audioEl){
+        audioEl=document.createElement('audio');
         audioEl.autoplay=true;
-        audioEl.srcObject=remoteStream;
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
       }
+      if(e.streams[0]) audioEl.srcObject=e.streams[0];
     }
 
     if(!peers[socketId].analyser){
@@ -5530,14 +5530,16 @@ $('voice-video-btn')?.addEventListener('click',async()=>{
 
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-      const sender=peer.pc.getSenders().find(s=>s.track?.kind==='video');
-      if(sender) await sender.replaceTrack(screenStream.getVideoTracks()[0]);
+      const transceivers=peer.pc.getTransceivers();
+      const videoTransceiver=transceivers.find(t=>t.kind==='video');
+      const videoSender=videoTransceiver?.sender;
+      if(videoSender) await videoSender.replaceTrack(screenStream.getVideoTracks()[0]);
       else peer.pc.addTrack(screenStream.getVideoTracks()[0],screenStream);
 
       if(screenAudioTrack){
-        const audioSender=peer.pc.getSenders().find(s=>s.track?.kind==='audio'&&!s.track?.label?.startsWith('screen'));
+        const audioTransceiver=transceivers.find(t=>t.kind==='audio');
+        const audioSender=audioTransceiver?.sender;
         if(audioSender) await audioSender.replaceTrack(screenAudioTrack);
-        else peer.pc.addTrack(screenAudioTrack,screenStream);
       }
 
       try{
@@ -5565,7 +5567,9 @@ function stopScreenShare(){
 
   for(const [sid,peer] of Object.entries(peers)){
     if(!peer.pc) continue;
-    const videoSender=peer.pc.getSenders().find(s=>s.track?.kind==='video');
+    const transceivers=peer.pc.getTransceivers();
+    const videoTransceiver=transceivers.find(t=>t.kind==='video');
+    const videoSender=videoTransceiver?.sender;
     if(isCameraOn&&cameraStream){
       if(videoSender) videoSender.replaceTrack(cameraStream.getVideoTracks()[0]);
       else peer.pc.addTrack(cameraStream.getVideoTracks()[0],cameraStream);
@@ -5576,7 +5580,8 @@ function stopScreenShare(){
     if(localStream){
       const micTrack=localStream.getAudioTracks()[0];
       if(micTrack){
-        const audioSender=peer.pc.getSenders().find(s=>s.track?.kind==='audio');
+        const audioTransceiver=transceivers.find(t=>t.kind==='audio');
+        const audioSender=audioTransceiver?.sender;
         if(audioSender) audioSender.replaceTrack(micTrack);
       }
     }
@@ -5599,8 +5604,8 @@ async function toggleCamera(){
     if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-      const sender=peer.pc.getSenders().find(s=>s.track?.kind==='video');
-      if(sender) sender.replaceTrack(null);
+      const tcv=peer.pc.getTransceivers().find(t=>t.kind==='video');
+      if(tcv?.sender) tcv.sender.replaceTrack(null);
     }
     socket?.emit('camera-stopped');
     return;
@@ -5610,8 +5615,9 @@ async function toggleCamera(){
     isCameraOn=true;
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-      const sender=peer.pc.getSenders().find(s=>s.track?.kind==='video');
-      if(sender) await sender.replaceTrack(cameraStream.getVideoTracks()[0]);
+      const tcv=peer.pc.getTransceivers().find(t=>t.kind==='video');
+      if(tcv?.sender) await tcv.sender.replaceTrack(cameraStream.getVideoTracks()[0]);
+      else peer.pc.addTrack(cameraStream.getVideoTracks()[0],cameraStream);
     }
     socket?.emit('camera-started');
   }catch(e){ console.error('camera error',e); }
