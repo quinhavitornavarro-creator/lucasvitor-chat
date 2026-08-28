@@ -5702,11 +5702,19 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
 
   const remoteAudio=new MediaStream();
   const remoteVideo=new MediaStream();
-  pc.ontrack=e=>{
-    const track=e.track;
+  pc.ontrack=event=>{
+    console.log('[WebRTC] Faixa recebida:', event.track.kind, event.streams);
+    const track=event.track;
 
     if(track.kind==='video'){
-      const vs=e.streams[0]||remoteVideo;
+      const vs=event.streams && event.streams[0] ? event.streams[0] : new MediaStream([track]);
+      if(event.streams && event.streams[0]){
+        event.streams[0].getTracks().forEach(t=>{
+          if(!remoteVideo.getTracks().find(rt=>rt.id===t.id)) remoteVideo.addTrack(t);
+        });
+      } else {
+        if(!remoteVideo.getTracks().find(t=>t.id===track.id)) remoteVideo.addTrack(track);
+      }
       let videoEl=document.querySelector('[data-voice-socket="'+socketId+'"] video');
       if(!videoEl){
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
@@ -5734,7 +5742,12 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
       if(videoEl){
         videoEl.srcObject=null;
         videoEl.srcObject=vs;
-        videoEl.play().catch(()=>{});
+        videoEl.play().catch(err=>console.warn('[WebRTC] Autoplay de vídeo bloqueado:', err));
+      }
+      const genericVideo=document.getElementById('screen-share-video')||document.querySelector('.remote-video-element');
+      if(genericVideo){
+        genericVideo.srcObject=vs;
+        genericVideo.play().catch(err=>console.warn('[WebRTC] Autoplay de vídeo bloqueado:', err));
       }
     }
 
@@ -5742,17 +5755,26 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
       if(!remoteAudio.getTracks().find(t=>t.id===track.id)){
         remoteAudio.addTrack(track);
       }
-      let audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
+      let audioEl=document.getElementById('audio-'+socketId);
+      if(!audioEl) audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
       if(!audioEl){
         audioEl=document.createElement('audio');
+        audioEl.id='audio-'+socketId;
         audioEl.autoplay=true;
         audioEl.muted=false;
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
+        else document.body.appendChild(audioEl);
       }
-      audioEl.srcObject=null;
-      audioEl.srcObject=remoteAudio;
-      audioEl.play().catch(()=>{
+      audioEl.srcObject=event.streams && event.streams[0] ? event.streams[0] : new MediaStream([track]);
+      if(!audioEl.srcObject.getTracks().find(t=>t.id===track.id)){
+        audioEl.srcObject=new MediaStream([track]);
+      }
+      // fallback to aggregated remoteAudio if needed
+      if(audioEl.srcObject.getTracks().length===0) audioEl.srcObject=remoteAudio;
+      audioEl.muted=false;
+      audioEl.play().catch(err=>{
+        console.warn('[WebRTC] Autoplay de áudio bloqueado pelo navegador:', err);
         const resume=()=>{
           audioEl.play().catch(()=>{});
           document.removeEventListener('click',resume);
@@ -5911,21 +5933,30 @@ $('voice-share-btn')?.addEventListener('click',async()=>{
 
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-      const transceivers=peer.pc.getTransceivers();
-      const videoTransceiver=transceivers.find(t=>t.kind==='video');
-      if(videoTransceiver?.sender){
+      const videoSender=peer.pc.getSenders().find(s=> s.track && s.track.kind==='video');
+      const videoTransceiver=peer.pc.getTransceivers().find(t=>t.kind==='video');
+      if(videoSender){
+        await videoSender.replaceTrack(screenVideoTrack);
+      } else if(videoTransceiver?.sender){
         await videoTransceiver.sender.replaceTrack(screenVideoTrack);
+      } else {
+        peer.pc.addTrack(screenVideoTrack, screenStream);
       }
 
       if(screenAudioTrack){
-        const audioTransceiver=transceivers.find(t=>t.kind==='audio');
-        if(audioTransceiver?.sender){
+        const audioSender=peer.pc.getSenders().find(s=> s.track && s.track.kind==='audio');
+        const audioTransceiver=peer.pc.getTransceivers().find(t=>t.kind==='audio');
+        if(audioSender){
+          await audioSender.replaceTrack(screenAudioTrack);
+        } else if(audioTransceiver?.sender){
           await audioTransceiver.sender.replaceTrack(screenAudioTrack);
+        } else {
+          peer.pc.addTrack(screenAudioTrack, screenStream);
         }
       }
 
       try{
-        const offer=await peer.pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
+        const offer=await peer.pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
         await peer.pc.setLocalDescription(offer);
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }catch(e){ console.error('renegotiation error',e); }
