@@ -5699,11 +5699,14 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
   const remoteStream=new MediaStream();
   pc.ontrack=e=>{
     const track=e.track;
-    const stream=e.streams[0]||remoteStream;
-    if(stream!==remoteStream && e.streams[0]){
-      e.streams[0].getTracks().forEach(t=>{
+    let stream=e.streams[0];
+    if(!stream){
+      stream=new MediaStream([track]);
+    }else{
+      stream.getTracks().forEach(t=>{
         if(!remoteStream.getTracks().find(rt=>rt.id===t.id)) remoteStream.addTrack(t);
       });
+      stream=remoteStream;
     }
     if(track.kind==='video'){
       let videoEl=document.querySelector('[data-voice-socket="'+socketId+'"] video');
@@ -5731,6 +5734,7 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
         }
       }
       if(videoEl){
+        videoEl.srcObject=null;
         videoEl.srcObject=stream;
         videoEl.play().catch(()=>{});
       }
@@ -5744,6 +5748,7 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
       }
+      audioEl.srcObject=null;
       audioEl.srcObject=stream;
       audioEl.play().catch(()=>{
         const resumeAudio=()=>{
@@ -5907,6 +5912,8 @@ $('voice-share-btn')?.addEventListener('click',async()=>{
       const videoSender=peer.pc.getSenders().find(s=>s.track&&s.track.kind==='video')||peer.pc.getSenders().find(s=>!s.track);
       if(videoSender){
         await videoSender.replaceTrack(screenVideoTrack);
+      }else{
+        peer.pc.addTrack(screenVideoTrack,screenStream);
       }
 
       if(screenAudioTrack){
