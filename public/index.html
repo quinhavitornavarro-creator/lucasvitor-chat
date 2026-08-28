@@ -3131,6 +3131,117 @@
       .profile-layout { grid-template-columns: 1fr; }
     }
   </style>
+
+  <style>
+    #custom-context-menu {
+      display: none;
+      position: absolute;
+      z-index: 10000;
+      min-width: 220px;
+      background: #1a1b2e;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 6px 0;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      font-family: 'Inter', sans-serif;
+    }
+    #custom-context-menu .ctx-header {
+      padding: 8px 14px 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #8b8fa3;
+      letter-spacing: 0.5px;
+    }
+    #custom-context-menu .ctx-user {
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    #custom-context-menu .ctx-user img {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    #custom-context-menu .ctx-volume {
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    #custom-context-menu .ctx-volume label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #8b8fa3;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    #custom-context-menu .ctx-volume .volume-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #custom-context-menu .ctx-volume input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: #2d2f42;
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+    #custom-context-menu .ctx-volume input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #7c3aed;
+      cursor: pointer;
+      border: 2px solid #1a1b2e;
+    }
+    #custom-context-menu .ctx-volume input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #7c3aed;
+      cursor: pointer;
+      border: 2px solid #1a1b2e;
+    }
+    #custom-context-menu .ctx-volume .vol-pct {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #e0e0e0;
+      min-width: 40px;
+      text-align: right;
+    }
+    #custom-context-menu .ctx-divider {
+      height: 1px;
+      background: rgba(255,255,255,0.06);
+      margin: 4px 0;
+    }
+    #custom-context-menu .ctx-action {
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      color: #e0e0e0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    #custom-context-menu .ctx-action:hover {
+      background: rgba(124,58,237,0.15);
+    }
+    #custom-context-menu .ctx-action.danger { color: #ef4444; }
+    #custom-context-menu .ctx-action.danger:hover { background: rgba(239,68,68,0.15); }
+  </style>
 </head>
 <body>
 
@@ -3758,6 +3869,22 @@
     <div class="fs-label" id="fs-label"></div>
   </div>
 
+  <!-- Context Menu -->
+  <div id="custom-context-menu">
+    <div class="ctx-header">Participante</div>
+    <div class="ctx-user" id="ctx-user-info"></div>
+    <div class="ctx-volume">
+      <label>Volume do Usuário</label>
+      <div class="volume-row">
+        <input type="range" id="ctx-volume-slider" min="0" max="200" value="100">
+        <span class="vol-pct" id="ctx-volume-pct">100%</span>
+      </div>
+    </div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-action" id="ctx-mute-toggle">🔇 Mutar Usuário</div>
+    <div class="ctx-action danger" id="ctx-deafen-toggle">🔈 Surdo (Desativar Áudio)</div>
+  </div>
+
   <!-- File upload hidden input -->
   <input type="file" id="file-input" class="hidden" accept="image/*,video/*,.pdf,.txt,.zip">
 
@@ -4131,6 +4258,7 @@ function connectSocket(){
       for(const u of data.existingUsers){
         createPeerConnection(u.socketId,u.userId,u.username,u.avatarSeed,true);
       }
+      setTimeout(applyVolumePrefs,500);
     }
     if(!speakingCheckInterval) startSpeakingDetection();
     updateVoiceChannelUsersUI();
@@ -4144,6 +4272,7 @@ function connectSocket(){
 
   socket.on('voice-user-joined',data=>{
     createPeerConnection(data.socketId,data.userId,data.username,data.avatarSeed,true);
+    setTimeout(applyVolumePrefs,500);
   });
 
   socket.on('voice-user-left',data=>{
@@ -5938,6 +6067,152 @@ function closeFullscreen(){
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape') closeFullscreen();
+});
+
+// ─── Context Menu (Volume Control) ─────────────────────────────────────────
+
+let ctxTargetSocketId=null;
+let ctxMutedUsers={};
+
+function getVolumePrefs(){
+  try{ return JSON.parse(localStorage.getItem('nx_volume_prefs')||'{}'); }catch(e){ return {}; }
+}
+function setVolumePrefs(prefs){
+  try{ localStorage.setItem('nx_volume_prefs',JSON.stringify(prefs)); }catch(e){}
+}
+function applyVolumePrefs(){
+  const prefs=getVolumePrefs();
+  Object.keys(prefs).forEach(sid=>{
+    const v=prefs[sid];
+    document.querySelectorAll('[data-voice-socket="'+sid+'"] audio,[data-voice-socket="'+sid+'"] video').forEach(el=>{
+      if(el.tagName==='AUDIO') el.volume=Math.min(v/100,2);
+    });
+  });
+}
+
+function hideContextMenu(){
+  $('custom-context-menu').style.display='none';
+  ctxTargetSocketId=null;
+}
+
+document.addEventListener('click',e=>{
+  if(!$('custom-context-menu').contains(e.target)){
+    hideContextMenu();
+  }
+});
+
+document.addEventListener('contextmenu',e=>{
+  const tile=e.target.closest('.video-tile[data-voice-socket]');
+  const voiceUser=e.target.closest('.voice-user[data-socket-id]');
+  const memberItem=e.target.closest('.member-item[data-user-id]');
+
+  let targetSocketId=null;
+  let targetUsername='';
+  let targetAvatar='';
+
+  if(tile && tile.dataset.voiceSocket && tile.dataset.voiceSocket!=='local' && tile.dataset.voiceSocket!=='local-screen'){
+    targetSocketId=tile.dataset.voiceSocket;
+    const nameEl=tile.querySelector('.video-name');
+    targetUsername=nameEl?.textContent||'User';
+    const imgEl=tile.querySelector('img');
+    targetAvatar=imgEl?.src||'';
+  }else if(voiceUser && voiceUser.dataset.socketId){
+    targetSocketId=voiceUser.dataset.socketId;
+    targetUsername=voiceUser.querySelector('.voice-name')?.textContent||'User';
+    const avEl=voiceUser.querySelector('.voice-avatar');
+    targetAvatar=avEl?.style?.backgroundImage?.replace(/url\(["']?|["']?\)/g,'')||'';
+  }else if(memberItem && memberItem.dataset.userId){
+    const userId=memberItem.dataset.userId;
+    const mem=membersData?.find(m=>m.id==userId);
+    if(mem){
+      for(const [sid,p] of Object.entries(peers)){
+        if(p.userId==userId){ targetSocketId=sid; break; }
+      }
+      targetUsername=mem.username;
+      targetAvatar=getAvatarUrl(mem.avatarSeed);
+    }
+  }
+
+  if(!targetSocketId) return;
+
+  e.preventDefault();
+  ctxTargetSocketId=targetSocketId;
+
+  const menu=$('custom-context-menu');
+  const userImg=targetAvatar?'<img src="'+escapeHtml(targetAvatar)+'" alt="">':'';
+  $('ctx-user-info').innerHTML=userImg+'<span>'+escapeHtml(targetUsername)+'</span>';
+
+  const prefs=getVolumePrefs();
+  const currentVol=prefs[targetSocketId]??100;
+  $('ctx-volume-slider').value=currentVol;
+  $('ctx-volume-pct').textContent=currentVol+'%';
+
+  if(ctxMutedUsers[targetSocketId]){
+    $('ctx-mute-toggle').textContent='🔊 Desmutar Usuário';
+    $('ctx-deafen-toggle').textContent='🔊 Restaurar Áudio';
+  }else{
+    $('ctx-mute-toggle').textContent='🔇 Mutar Usuário';
+    $('ctx-deafen-toggle').textContent='🔈 Surdo (Desativar Áudio)';
+  }
+
+  let x=e.pageX;
+  let y=e.pageY;
+  menu.style.display='block';
+  const rect=menu.getBoundingClientRect();
+  if(x+rect.width>window.innerWidth) x=window.innerWidth-rect.width-8;
+  if(y+rect.height>window.innerHeight+window.scrollY) y=window.innerHeight+window.scrollY-rect.height-8;
+  menu.style.left=x+'px';
+  menu.style.top=y+'px';
+});
+
+$('ctx-volume-slider')?.addEventListener('input',e=>{
+  if(!ctxTargetSocketId) return;
+  const val=parseInt(e.target.value);
+  $('ctx-volume-pct').textContent=val+'%';
+
+  const mediaEls=document.querySelectorAll('[data-voice-socket="'+ctxTargetSocketId+'"] audio');
+  mediaEls.forEach(el=>{ el.volume=Math.min(val/100,2); });
+
+  const prefs=getVolumePrefs();
+  prefs[ctxTargetSocketId]=val;
+  setVolumePrefs(prefs);
+});
+
+$('ctx-mute-toggle')?.addEventListener('click',()=>{
+  if(!ctxTargetSocketId) return;
+  const peer=peers[ctxTargetSocketId];
+  if(!peer) return;
+  const audioEls=document.querySelectorAll('[data-voice-socket="'+ctxTargetSocketId+'"] audio');
+  if(ctxMutedUsers[ctxTargetSocketId]){
+    delete ctxMutedUsers[ctxTargetSocketId];
+    audioEls.forEach(el=>{ el.muted=false; el.volume=(getVolumePrefs()[ctxTargetSocketId]??100)/100; });
+    $('ctx-mute-toggle').textContent='🔇 Mutar Usuário';
+  }else{
+    ctxMutedUsers[ctxTargetSocketId]=true;
+    audioEls.forEach(el=>{ el.muted=true; });
+    $('ctx-mute-toggle').textContent='🔊 Desmutar Usuário';
+  }
+});
+
+$('ctx-deafen-toggle')?.addEventListener('click',()=>{
+  if(!ctxTargetSocketId) return;
+  const peer=peers[ctxTargetSocketId];
+  if(!peer) return;
+  const audioEls=document.querySelectorAll('[data-voice-socket="'+ctxTargetSocketId+'"] audio');
+  const videoEls=document.querySelectorAll('[data-voice-socket="'+ctxTargetSocketId+'"] video');
+  if(ctxMutedUsers[ctxTargetSocketId]){
+    delete ctxMutedUsers[ctxTargetSocketId];
+    audioEls.forEach(el=>{ el.muted=false; });
+    videoEls.forEach(el=>{ el.muted=false; });
+    $('ctx-deafen-toggle').textContent='🔈 Surdo (Desativar Áudio)';
+    $('ctx-mute-toggle').textContent='🔇 Mutar Usuário';
+  }else{
+    ctxMutedUsers[ctxTargetSocketId]=true;
+    audioEls.forEach(el=>{ el.muted=true; });
+    videoEls.forEach(el=>{ el.muted=true; });
+    $('ctx-deafen-toggle').textContent='🔊 Restaurar Áudio';
+    $('ctx-mute-toggle').textContent='🔊 Desmutar Usuário';
+  }
 });
 
 // ─── Init ──────────────────────────────────────────────────────────────────
