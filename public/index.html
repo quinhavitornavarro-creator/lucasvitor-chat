@@ -5752,30 +5752,29 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
     }
 
     if(track.kind==='audio'){
-      if(!remoteAudio.getTracks().find(t=>t.id===track.id)){
-        remoteAudio.addTrack(track);
-      }
+      if(!remoteAudio.getTracks().find(t=>t.id===track.id)) remoteAudio.addTrack(track);
       let audioEl=document.getElementById('audio-'+socketId);
       if(!audioEl) audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
       if(!audioEl){
         audioEl=document.createElement('audio');
         audioEl.id='audio-'+socketId;
         audioEl.autoplay=true;
+        audioEl.playsInline=true;
         audioEl.muted=false;
+        audioEl.volume=1;
+        audioEl.style.display='none';
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
         else document.body.appendChild(audioEl);
       }
-      audioEl.srcObject=event.streams && event.streams[0] ? event.streams[0] : new MediaStream([track]);
-      if(!audioEl.srcObject.getTracks().find(t=>t.id===track.id)){
-        audioEl.srcObject=new MediaStream([track]);
-      }
-      // fallback to aggregated remoteAudio if needed
-      if(audioEl.srcObject.getTracks().length===0) audioEl.srcObject=remoteAudio;
+      audioEl.srcObject=remoteAudio;
       audioEl.muted=false;
+      audioEl.volume=1;
+      console.log('[WebRTC] audio ->',socketId,'tracks:',remoteAudio.getTracks().length);
       audioEl.play().catch(err=>{
-        console.warn('[WebRTC] Autoplay de áudio bloqueado pelo navegador:', err);
+        console.warn('[WebRTC] Autoplay de áudio bloqueado:',err);
         const resume=()=>{
+          const ctx=getAudioCtx(); if(ctx.state==='suspended') ctx.resume();
           audioEl.play().catch(()=>{});
           document.removeEventListener('click',resume);
           document.removeEventListener('keydown',resume);
