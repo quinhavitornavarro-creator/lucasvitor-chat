@@ -4353,12 +4353,22 @@ function connectSocket(){
   });
 
   socket.on('voice-offer',async data=>{
-    let pc=peers[data.fromSocketId]?.pc;
-    if(!pc) return;
+    let peer=peers[data.fromSocketId];
+    if(!peer){
+      createPeerConnection(data.fromSocketId,data.fromUser?.id,data.fromUser?.username,data.fromUser?.avatarSeed,false);
+      peer=peers[data.fromSocketId];
+    }
+    if(!peer?.pc) return;
     try{
-      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-      const answer=await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      await peer.pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      if(peer.iceQueue){
+        for(const c of peer.iceQueue){
+          try{ await peer.pc.addIceCandidate(new RTCIceCandidate(c)); }catch(e){}
+        }
+        peer.iceQueue=[];
+      }
+      const answer=await peer.pc.createAnswer();
+      await peer.pc.setLocalDescription(answer);
       socket.emit('voice-answer',{answer,targetSocketId:data.fromSocketId});
     }catch(e){ console.error('voice-offer error',e); }
   });
@@ -4366,13 +4376,25 @@ function connectSocket(){
   socket.on('voice-answer',async data=>{
     const peer=peers[data.fromSocketId];
     if(!peer?.pc) return;
-    try{ await peer.pc.setRemoteDescription(new RTCSessionDescription(data.answer)); }catch(e){}
+    try{
+      await peer.pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+      if(peer.iceQueue){
+        for(const c of peer.iceQueue){
+          try{ await peer.pc.addIceCandidate(new RTCIceCandidate(c)); }catch(e){}
+        }
+        peer.iceQueue=[];
+      }
+    }catch(e){}
   });
 
   socket.on('ice-candidate',async data=>{
     const peer=peers[data.fromSocketId];
     if(!peer?.pc) return;
-    try{ await peer.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); }catch(e){}
+    if(peer.pc.remoteDescription){
+      try{ await peer.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); }catch(e){}
+    }else{
+      peer.iceQueue.push(data.candidate);
+    }
   });
 
   socket.on('voice-user-muted',data=>{
@@ -5663,16 +5685,14 @@ function initWaveform(){
 }
 
 async function createPeerConnection(socketId,userId,username,avatarSeed,isInitiator){
-  if(peers[socketId]) return;
+  if(peers[socketId]) return peers[socketId];
   const pc=new RTCPeerConnection(ICE_SERVERS);
-  peers[socketId]={pc,userId,username,avatarSeed,analyser:null,isMuted:false,isScreenSharing:false};
+  const iceQueue=[];
+  peers[socketId]={pc,userId,username,avatarSeed,analyser:null,isMuted:false,isScreenSharing:false,iceQueue};
 
   if(localStream){
     localStream.getTracks().forEach(track=>pc.addTrack(track,localStream));
   }
-
-  pc.addTransceiver('video',{direction:'sendrecv'});
-  pc.addTransceiver('audio',{direction:'sendrecv'});
 
   const remoteStream=new MediaStream();
   pc.ontrack=e=>{
@@ -5717,11 +5737,21 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
       let audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
       if(!audioEl){
         audioEl=document.createElement('audio');
+        audioEl.autoplay=true;
+        audioEl.muted=false;
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
       }
       audioEl.srcObject=stream;
-      audioEl.play().catch(()=>{});
+      audioEl.play().catch(()=>{
+        const resumeAudio=()=>{
+          audioEl.play().catch(()=>{});
+          document.removeEventListener('click',resumeAudio);
+          document.removeEventListener('keydown',resumeAudio);
+        };
+        document.addEventListener('click',resumeAudio,{once:false});
+        document.addEventListener('keydown',resumeAudio,{once:false});
+      });
     }
 
     if(stream&&!peers[socketId].analyser){
