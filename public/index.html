@@ -4351,6 +4351,25 @@ function connectSocket(){
     updateVoiceChannelUsersUI();
   });
 
+  socket.on('camera-started',data=>{
+    const card=document.querySelector('[data-voice-socket="'+data.socketId+'"]');
+    if(card&&!card.querySelector('.cam-badge')){
+      const b=document.createElement('span');
+      b.className='cam-badge';
+      b.textContent='📹';
+      b.style.cssText='position:absolute;top:4px;left:4px;background:rgba(124,58,237,0.85);color:#fff;font-size:10px;padding:2px 5px;border-radius:4px;z-index:2;';
+      card.style.position='relative';
+      card.appendChild(b);
+    }
+    if(voiceUsersMap[data.socketId]) voiceUsersMap[data.socketId].hasCamera=true;
+  });
+
+  socket.on('camera-stopped',data=>{
+    const card=document.querySelector('[data-voice-socket="'+data.socketId+'"]');
+    if(card) card.querySelector('.cam-badge')?.remove();
+    if(voiceUsersMap[data.socketId]) voiceUsersMap[data.socketId].hasCamera=false;
+  });
+
   socket.on('message-edited',data=>{
     const el=document.querySelector('[data-msg-id="'+data.messageId+'"] .msg-content');
     if(el) el.innerHTML=renderRichText(data.content)+' <small style="color:var(--text-muted)">(editado)</small>';
@@ -5110,36 +5129,6 @@ async function handleFileUpload(file){
   }catch(e){ showToast('error','Erro',e.message); }
 }
 
-$('upload-avatar-btn')?.addEventListener('click',()=>$('avatar-file-input')?.click());
-
-$('avatar-file-input')?.addEventListener('change',async e=>{
-  const file=e.target.files[0];
-  if(!file) return;
-  await handleAvatarUpload(file);
-  e.target.value='';
-});
-
-async function handleAvatarUpload(file){
-  try{
-    const fd=new FormData();
-    fd.append('avatar',file);
-    const d=await apiUpload('/api/avatar',fd);
-    if(d.success){
-      currentUser.avatarSeed=d.avatarUrl;
-      updateUserUI();
-      showToast('success','Avatar','Avatar atualizado!');
-    }
-  }catch(e){ showToast('error','Erro',e.message); }
-}
-
-$('remove-avatar-btn')?.addEventListener('click',async()=>{
-  try{
-    await fetch('/api/avatar',{method:'DELETE'});
-    currentUser.avatarSeed=null;
-    updateUserUI();
-    showToast('info','Avatar','Avatar removido');
-  }catch(e){ showToast('error','Erro',e.message); }
-});
 
 // ─── User Settings ─────────────────────────────────────────────────────────
 
@@ -5350,11 +5339,14 @@ $('home-btn')?.addEventListener('click',()=>{
 
 // ─── Members ───────────────────────────────────────────────────────────────
 
+let membersData=[];
+
 async function loadMembers(serverId){
   if(!serverId) return;
   try{
     const d=await apiCall('/api/servers/'+serverId+'/members');
-    renderMembers(d.members||[]);
+    membersData=d.members||[];
+    renderMembers(membersData);
   }catch(e){ console.error('loadMembers',e); }
 }
 
@@ -5799,7 +5791,9 @@ $('voice-disconnect-btn')?.addEventListener('click',()=>{
   cleanupVoice();
 });
 
-$('voice-video-btn')?.addEventListener('click',async()=>{
+$('voice-video-btn')?.addEventListener('click',()=>toggleCamera());
+
+$('voice-share-btn')?.addEventListener('click',async()=>{
   if(!currentVoiceChannelId) return;
   if(isScreenSharing){ stopScreenShare(); return; }
   try{
@@ -5832,15 +5826,12 @@ $('voice-video-btn')?.addEventListener('click',async()=>{
       }catch(e){ console.error('renegotiation error',e); }
     }
     socket?.emit('screen-share-started');
-    $('voice-video-btn')?.classList.add('active');
     $('voice-share-btn')?.classList.add('active');
     addLocalScreenCard(screenStream);
     const hasAudio=screenStream.getAudioTracks().length>0;
     showToast('info','Screen Share',hasAudio?'Compartilhamento com áudio iniciado':'Compartilhamento iniciado');
   }catch(e){ console.error('screen share error',e); }
 });
-
-$('voice-share-btn')?.addEventListener('click',()=>$('voice-video-btn')?.click());
 
 function stopScreenShare(){
   isScreenSharing=false;
@@ -5881,7 +5872,6 @@ function stopScreenShare(){
     }catch(e){}
   }
   socket?.emit('screen-share-stopped');
-  $('voice-video-btn')?.classList.remove('active');
   $('voice-share-btn')?.classList.remove('active');
 }
 
@@ -5901,6 +5891,8 @@ async function toggleCamera(){
       }catch(e){}
     }
     socket?.emit('camera-stopped');
+    $('voice-video-btn')?.classList.remove('active');
+    showToast('info','Câmera','Câmera desligada');
     return;
   }
   try{
@@ -5917,6 +5909,8 @@ async function toggleCamera(){
       }catch(e){}
     }
     socket?.emit('camera-started');
+    $('voice-video-btn')?.classList.add('active');
+    showToast('info','Câmera','Câmera ligada');
   }catch(e){ console.error('camera error',e); }
 }
 
@@ -6067,6 +6061,8 @@ function closeFullscreen(){
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape') closeFullscreen();
+  if(e.ctrlKey&&e.key==='m'){ e.preventDefault(); $('voice-mute-btn')?.click(); }
+  if(e.ctrlKey&&e.key==='d'){ e.preventDefault(); $('voice-deafen-btn')?.click(); }
 });
 
 // ─── Context Menu (Volume Control) ─────────────────────────────────────────

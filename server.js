@@ -9,15 +9,19 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const fs = require('fs');
 const { initDatabase, query, queryOne, run, runReturningId } = require('./database');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { maxHttpBufferSize: 10e6 });
+const io = new Server(server, {
+  maxHttpBufferSize: 10e6,
+  cors: { origin: '*', methods: ['GET', 'POST'] }
+});
 
-const JWT_SECRET = process.env.JWT_SECRET || 'discord_clone_secret_key_2024_' + Date.now();
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'discord_clone_refresh_secret_2024_' + Date.now();
+const JWT_SECRET = process.env.JWT_SECRET || 'nexuschat_jwt_secret_key_2024_production';
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'nexuschat_refresh_secret_key_2024_production';
 const PORT = process.env.PORT || 3000;
 
 // ─── Security ────────────────────────────────────────────────────────────────
@@ -83,6 +87,20 @@ const upload = multer({
     const ext = allowed.test(path.extname(file.originalname).toLowerCase());
     const mime = allowed.test(file.mimetype.split('/')[1]) || file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/') || file.mimetype === 'application/pdf';
     cb(null, ext || mime);
+  }
+});
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, avatarsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `avatar_${req.user.id}_${Date.now()}${ext}`);
+  }
+});
+const avatarUpload = multer({
+  storage: avatarStorage, limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    cb(null, /^image\/(jpeg|jpg|png|gif|webp)$/.test(file.mimetype));
   }
 });
 
@@ -264,7 +282,7 @@ app.post('/api/register', async (req, res) => {
     res.cookie('refreshToken', refreshToken, { httpOnly: true, maxAge: 30 * 24 * 60 * 60 * 1000, sameSite: 'lax' });
     res.json({ success: true, user: { id: userId, username, email, avatarSeed }, token: accessToken });
   } catch (error) {
-    console.error('Erro no registro:', error);
+    console.error('Erro no registro:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -274,15 +292,10 @@ app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password)
       return res.status(400).json({ error: 'Email e senha são obrigatórios' });
-    console.log('[LOGIN] Tentativa para email:', email);
     const user = await findByEmail(email);
-    if (!user) {
-      console.log('[LOGIN] Usuário não encontrado para email:', email);
+    if (!user)
       return res.status(401).json({ error: 'Email ou senha inválidos' });
-    }
-    console.log('[LOGIN] Usuário encontrado (id:', user.id, 'username:', user.username, ')');
     const passwordMatch = bcrypt.compareSync(password, user.password_hash);
-    console.log('[LOGIN] Senha confere:', passwordMatch);
     if (!passwordMatch)
       return res.status(401).json({ error: 'Email ou senha inválidos' });
 
@@ -296,13 +309,12 @@ app.post('/api/login', async (req, res) => {
       token: accessToken
     });
   } catch (error) {
-    console.error('Erro no login:', error);
+    console.error('Erro no login:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
 
 // ─── Password Recovery ────────────────────────────────────────────────────────
-const crypto = require('crypto');
 
 function generateResetToken() {
   return crypto.randomBytes(32).toString('hex');
@@ -325,12 +337,11 @@ app.post('/api/forgot-password', authLimiter, async (req, res) => {
 
     await run('INSERT INTO password_resets (user_id, token, expires_at) VALUES ($1, $2, $3)', [user.id, token, expiresAt]);
 
-    console.log(`[PASSWORD RESET] User: ${user.username} | Token: ${token} | Expires: ${expiresAt}`);
-    console.log(`[PASSWORD RESET] URL: ${req.protocol}://${req.get('host')}/reset-password?token=${token}`);
+    console.log(`[PASSWORD RESET] User: ${user.username} | Token: ${token}`);
 
     res.json({ success: true, message: 'Se o email estiver cadastrado, um código de recuperação foi gerado.', resetToken: token });
   } catch (error) {
-    console.error('Erro no forgot-password:', error);
+    console.error('Erro no forgot-password:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -357,7 +368,7 @@ app.post('/api/reset-password', authLimiter, async (req, res) => {
 
     res.json({ success: true, message: 'Senha alterada com sucesso. Faça login com a nova senha.' });
   } catch (error) {
-    console.error('Erro no reset-password:', error);
+    console.error('Erro no reset-password:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -407,6 +418,7 @@ app.get('/api/servers', authMiddleware, async (req, res) => {
     }
     res.json({ servers: serversWithChannels });
   } catch (error) {
+    console.error('Erro ao buscar servidores:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -432,7 +444,7 @@ app.post('/api/servers', authMiddleware, async (req, res) => {
     const channels = await getServerChannels(serverId);
     res.json({ success: true, server: { id: newServer.id, name: newServer.name, inviteCode: newServer.invite_code, channels } });
   } catch (error) {
-    console.error('Erro ao criar servidor:', error);
+    console.error('Erro ao criar servidor:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -453,7 +465,7 @@ app.post('/api/servers/join', authMiddleware, async (req, res) => {
     const channels = await getServerChannels(srv.id);
     res.json({ success: true, server: { id: srv.id, name: srv.name, inviteCode: srv.invite_code, channels } });
   } catch (error) {
-    console.error('Erro ao entrar no servidor:', error);
+    console.error('Erro ao entrar no servidor:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -476,7 +488,7 @@ app.post('/api/servers/:serverId/channels', authMiddleware, async (req, res) => 
     const channels = await getServerChannels(parseInt(serverId));
     res.json({ success: true, channels });
   } catch (error) {
-    console.error('Erro ao criar canal:', error);
+    console.error('Erro ao criar canal:', error.message);
     res.status(500).json({ error: 'Erro interno do servidor' });
   }
 });
@@ -585,72 +597,11 @@ app.post('/api/upload', authMiddleware, upload.single('file'), async (req, res) 
   }
 });
 
-// ─── Avatar Upload ────────────────────────────────────────────────────────────
-const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, avatarsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `avatar_${req.user.id}_${Date.now()}${ext}`);
-  }
-});
-const avatarUpload = multer({
-  storage: avatarStorage, limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    cb(null, /^image\/(jpeg|jpg|png|gif|webp)$/.test(file.mimetype));
-  }
-});
-
-app.post('/api/avatar', authMiddleware, avatarUpload.single('avatar'), async (req, res) => {
-  try {
-    console.log('[AVATAR] Upload recebido:', req.file ? req.file.filename : 'NENHUM ARQUIVO');
-    if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada. Formato aceito: JPEG, PNG, GIF, WebP' });
-    const avatarUrl = `/uploads/avatars/${req.file.filename}`;
-    await run('UPDATE users SET avatar_seed = $1 WHERE id = $2', [avatarUrl, req.user.id]);
-
-    const sockets = userSockets.get(req.user.id);
-    if (sockets) {
-      for (const sid of sockets) {
-        const s = io.sockets.sockets.get(sid);
-        if (s && s.user) s.user.avatarSeed = avatarUrl;
-      }
-    }
-
-    res.json({ success: true, avatarUrl });
-  } catch (error) {
-    console.error('[AVATAR] Erro:', error);
-    res.status(500).json({ error: 'Erro ao atualizar avatar' });
-  }
-});
-
-app.delete('/api/avatar', authMiddleware, async (req, res) => {
-  try {
-    const user = await queryOne('SELECT avatar_seed FROM users WHERE id = $1', [req.user.id]);
-    if (user && user.avatar_seed && user.avatar_seed.startsWith('/uploads/avatars/')) {
-      const filePath = path.join(__dirname, 'public', user.avatar_seed);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
-    const newSeed = 'avatar_' + Date.now();
-    await run('UPDATE users SET avatar_seed = $1 WHERE id = $2', [newSeed, req.user.id]);
-
-    const sockets = userSockets.get(req.user.id);
-    if (sockets) {
-      for (const sid of sockets) {
-        const s = io.sockets.sockets.get(sid);
-        if (s && s.user) s.user.avatarSeed = newSeed;
-      }
-    }
-
-    res.json({ success: true, avatarUrl: null });
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao remover avatar' });
-  }
-});
-
-// ─── User Profile Routes ───────────────────────────────────────────────────
+// ─── Avatar Routes ──────────────────────────────────────────────────────────
 
 app.post('/api/users/avatar', authMiddleware, avatarUpload.single('avatar'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada' });
+    if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada. Formato aceito: JPEG, PNG, GIF, WebP' });
     const avatarUrl = `/uploads/avatars/${req.file.filename}`;
     await run('UPDATE users SET avatar_seed = $1 WHERE id = $2', [avatarUrl, req.user.id]);
     const sockets = userSockets.get(req.user.id);
@@ -662,6 +613,7 @@ app.post('/api/users/avatar', authMiddleware, avatarUpload.single('avatar'), asy
     }
     res.json({ success: true, avatarUrl });
   } catch (error) {
+    console.error('Erro ao atualizar avatar:', error.message);
     res.status(500).json({ error: 'Erro ao atualizar avatar' });
   }
 });
@@ -687,6 +639,8 @@ app.delete('/api/users/avatar', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Erro ao remover avatar' });
   }
 });
+
+// ─── User Profile Routes ───────────────────────────────────────────────────
 
 app.put('/api/users/username', authMiddleware, async (req, res) => {
   try {
@@ -750,9 +704,7 @@ app.post('/api/servers/:serverId/moderate', authMiddleware, async (req, res) => 
       const targetRole = await getMemberRole(serverId, targetUserId);
       if (targetRole === 'owner') return res.status(403).json({ error: 'Não pode moderar o dono do servidor' });
     }
-    if (action === 'ban') {
-      await run('DELETE FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, targetUserId]);
-    } else if (action === 'kick') {
+    if (action === 'ban' || action === 'kick') {
       await run('DELETE FROM server_members WHERE server_id = $1 AND user_id = $2', [serverId, targetUserId]);
     }
     await run('INSERT INTO moderation (server_id, user_id, moderator_id, action, reason, duration) VALUES ($1, $2, $3, $4, $5, $6)',
@@ -794,11 +746,26 @@ app.put('/api/users/status', authMiddleware, async (req, res) => {
   }
 });
 
+app.put('/api/users/password', authMiddleware, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Senhas obrigatórias' });
+    if (newPassword.length < 6) return res.status(400).json({ error: 'Nova senha deve ter pelo menos 6 caracteres' });
+    const user = await findById(req.user.id);
+    if (!bcrypt.compareSync(currentPassword, user.password_hash))
+      return res.status(401).json({ error: 'Senha atual incorreta' });
+    const salt = bcrypt.genSaltSync(12);
+    await run('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [bcrypt.hashSync(newPassword, salt), req.user.id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+});
+
 // ─── Message Pins ─────────────────────────────────────────────────────────
 app.post('/api/channels/:channelId/messages/:messageId/pin', authMiddleware, async (req, res) => {
   try {
     const messageId = parseInt(req.params.messageId);
-    const channelId = parseInt(req.params.channelId);
     const existing = await queryOne('SELECT * FROM message_pins WHERE message_id = $1', [messageId]);
     if (existing) {
       await run('DELETE FROM message_pins WHERE message_id = $1', [messageId]);
@@ -887,22 +854,6 @@ app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (
   }
 });
 
-app.put('/api/users/password', authMiddleware, async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Senhas obrigatórias' });
-    if (newPassword.length < 6) return res.status(400).json({ error: 'Nova senha deve ter pelo menos 6 caracteres' });
-    const user = await findById(req.user.id);
-    if (!bcrypt.compareSync(currentPassword, user.password_hash))
-      return res.status(401).json({ error: 'Senha atual incorreta' });
-    const salt = bcrypt.genSaltSync(12);
-    await run('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [bcrypt.hashSync(newPassword, salt), req.user.id]);
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
-
 // ─── SOCKET.IO ───────────────────────────────────────────────────────────────
 
 const connectedUsers = new Map();
@@ -923,9 +874,25 @@ io.use(async (socket, next) => {
   }
 });
 
-io.on('connection', (socket) => {
-  console.log(`${socket.user.username} conectou (id: ${socket.id})`);
+function broadcastVoiceUsers(channelId) {
+  const roomName = `voice:${channelId}`;
+  const users = [];
+  const room = io.sockets.adapter.rooms.get(roomName);
+  if (room) {
+    for (const sid of room) {
+      const vd = voiceUsers.get(sid);
+      if (vd && vd.channelId === channelId) {
+        users.push({
+          socketId: sid, userId: vd.userId, username: vd.username,
+          avatarSeed: vd.avatarSeed, isMuted: vd.isMuted, isScreenSharing: vd.isScreenSharing
+        });
+      }
+    }
+  }
+  io.to(roomName).emit('voice-users-list', { channelId, users });
+}
 
+io.on('connection', (socket) => {
   connectedUsers.set(socket.id, {
     id: socket.user.id,
     username: socket.user.username,
@@ -946,7 +913,7 @@ io.on('connection', (socket) => {
         socket.join(`server:${srv.id}`);
       }
     } catch (err) {
-      console.error('Erro na inicialização do socket:', err);
+      console.error('Erro na inicialização do socket:', err.message);
     }
   })();
 
@@ -976,7 +943,7 @@ io.on('connection', (socket) => {
           socket.emit('channelHistory', enriched);
         }
       } catch (err) {
-        console.error('Erro no joinRoom:', err);
+        console.error('Erro no joinRoom:', err.message);
       }
     })();
   });
@@ -1037,7 +1004,7 @@ io.on('connection', (socket) => {
           }
         }
       } catch (err) {
-        console.error('Erro no chatMessage:', err);
+        console.error('Erro no chatMessage:', err.message);
       }
     })();
   });
@@ -1070,7 +1037,7 @@ io.on('connection', (socket) => {
         const reactions = await getReactionsForMessages([messageId]);
         io.to(user.currentRoom).emit('reactions-update', { messageId, reactions: reactions[messageId] || [] });
       } catch (err) {
-        console.error('Erro no reaction:', err);
+        console.error('Erro no reaction:', err.message);
       }
     })();
   });
@@ -1107,7 +1074,7 @@ io.on('connection', (socket) => {
           await run('UPDATE users SET custom_status = $1, updated_at = NOW() WHERE id = $2', [sanitizeHtml(customStatus), socket.user.id]);
         }
       } catch (err) {
-        console.error('Erro no set-status:', err);
+        console.error('Erro no set-status:', err.message);
       }
     })();
   });
@@ -1244,50 +1211,38 @@ io.on('connection', (socket) => {
               await run('UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2', ['offline', user.id]);
               io.emit('user-presence', { userId: user.id, status: 'offline' });
             } catch (err) {
-              console.error('Erro no disconnect update:', err);
+              console.error('Erro no disconnect update:', err.message);
             }
           })();
         }
       }
       if (user.currentRoom) socket.to(user.currentRoom).emit('userLeft', { username: user.username });
       connectedUsers.delete(socket.id);
-      console.log(`${user.username} desconectou`);
     }
   });
+});
 
-  // ─── Helper ────────────────────────────────────────────────────────────────
-
-  function broadcastVoiceUsers(channelId) {
-    const roomName = `voice:${channelId}`;
-    const users = [];
-    const room = io.sockets.adapter.rooms.get(roomName);
-    if (room) {
-      for (const sid of room) {
-        const vd = voiceUsers.get(sid);
-        if (vd && vd.channelId === channelId) {
-          users.push({
-            socketId: sid, userId: vd.userId, username: vd.username,
-            avatarSeed: vd.avatarSeed, isMuted: vd.isMuted, isScreenSharing: vd.isScreenSharing
-          });
-        }
-      }
-    }
-    io.to(roomName).emit('voice-users-list', { channelId, users });
+// ─── Multer Error Handler ───────────────────────────────────────────────────
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ error: 'Erro no upload: ' + err.message });
   }
+  if (err) {
+    return res.status(500).json({ error: err.message });
+  }
+  next();
 });
 
 // ─── Start ───────────────────────────────────────────────────────────────────
 
 async function start() {
   try {
-    console.log('Iniciando banco de dados...');
     await initDatabase();
     console.log('Banco de dados inicializado com sucesso');
   } catch (err) {
     console.error('Erro ao inicializar banco:', err.message);
   }
 
-  // Cleanup expired refresh tokens periodically
   setInterval(async () => {
     try {
       await run("DELETE FROM refresh_tokens WHERE expires_at < NOW()::text");
@@ -1296,23 +1251,22 @@ async function start() {
     }
   }, 60 * 60 * 1000);
 
-  // Error handler for multer
-  app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-      console.error('[MULTER ERROR]', err.code, err.message);
-      return res.status(400).json({ error: 'Erro no upload: ' + err.message });
-    }
-    if (err) {
-      console.error('[MIDDLEWARE ERROR]', err.message);
-      return res.status(500).json({ error: err.message });
-    }
-    next();
-  });
-
   server.listen(PORT, () => {
     console.log(`Servidor rodando em http://localhost:${PORT}`);
   });
 }
+
+process.on('SIGTERM', () => {
+  console.log('SIGTERM recebido, encerrando graciosamente...');
+  io.close();
+  server.close(() => { process.exit(0); });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT recebido, encerrando...');
+  io.close();
+  server.close(() => { process.exit(0); });
+});
 
 start().catch(err => {
   console.error('FATAL:', err.message);
