@@ -4353,22 +4353,12 @@ function connectSocket(){
   });
 
   socket.on('voice-offer',async data=>{
-    let peer=peers[data.fromSocketId];
-    if(!peer){
-      createPeerConnection(data.fromSocketId,data.fromUser?.id,data.fromUser?.username,data.fromUser?.avatarSeed,false);
-      peer=peers[data.fromSocketId];
-    }
-    if(!peer?.pc) return;
+    let pc=peers[data.fromSocketId]?.pc;
+    if(!pc) return;
     try{
-      await peer.pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-      if(peer.iceQueue){
-        for(const c of peer.iceQueue){
-          try{ await peer.pc.addIceCandidate(new RTCIceCandidate(c)); }catch(e){}
-        }
-        peer.iceQueue=[];
-      }
-      const answer=await peer.pc.createAnswer();
-      await peer.pc.setLocalDescription(answer);
+      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      const answer=await pc.createAnswer();
+      await pc.setLocalDescription(answer);
       socket.emit('voice-answer',{answer,targetSocketId:data.fromSocketId});
     }catch(e){ console.error('voice-offer error',e); }
   });
@@ -4376,25 +4366,13 @@ function connectSocket(){
   socket.on('voice-answer',async data=>{
     const peer=peers[data.fromSocketId];
     if(!peer?.pc) return;
-    try{
-      await peer.pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-      if(peer.iceQueue){
-        for(const c of peer.iceQueue){
-          try{ await peer.pc.addIceCandidate(new RTCIceCandidate(c)); }catch(e){}
-        }
-        peer.iceQueue=[];
-      }
-    }catch(e){}
+    try{ await peer.pc.setRemoteDescription(new RTCSessionDescription(data.answer)); }catch(e){}
   });
 
   socket.on('ice-candidate',async data=>{
     const peer=peers[data.fromSocketId];
     if(!peer?.pc) return;
-    if(peer.pc.remoteDescription){
-      try{ await peer.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); }catch(e){}
-    }else{
-      peer.iceQueue.push(data.candidate);
-    }
+    try{ await peer.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); }catch(e){}
   });
 
   socket.on('voice-user-muted',data=>{
@@ -5685,23 +5663,27 @@ function initWaveform(){
 }
 
 async function createPeerConnection(socketId,userId,username,avatarSeed,isInitiator){
-  if(peers[socketId]) return peers[socketId];
+  if(peers[socketId]) return;
   const pc=new RTCPeerConnection(ICE_SERVERS);
-  const iceQueue=[];
-  peers[socketId]={pc,userId,username,avatarSeed,analyser:null,isMuted:false,isScreenSharing:false,iceQueue};
+  peers[socketId]={pc,userId,username,avatarSeed,analyser:null,isMuted:false,isScreenSharing:false};
 
   if(localStream){
     localStream.getTracks().forEach(track=>pc.addTrack(track,localStream));
   }
-  pc.addTransceiver('video',{direction:'sendrecv'});
 
-  const remoteAudioStreams={};
+  pc.addTransceiver('video',{direction:'sendrecv'});
+  pc.addTransceiver('audio',{direction:'sendrecv'});
+
+  const remoteStream=new MediaStream();
   pc.ontrack=e=>{
     const track=e.track;
-    const streamId=e.streams[0]?e.streams[0].id:null;
-
+    const stream=e.streams[0]||remoteStream;
+    if(stream!==remoteStream && e.streams[0]){
+      e.streams[0].getTracks().forEach(t=>{
+        if(!remoteStream.getTracks().find(rt=>rt.id===t.id)) remoteStream.addTrack(t);
+      });
+    }
     if(track.kind==='video'){
-      const vidStream=e.streams[0]||new MediaStream([track]);
       let videoEl=document.querySelector('[data-voice-socket="'+socketId+'"] video');
       if(!videoEl){
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
@@ -5727,47 +5709,26 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
         }
       }
       if(videoEl){
-        videoEl.srcObject=null;
-        videoEl.srcObject=vidStream;
+        videoEl.srcObject=stream;
         videoEl.play().catch(()=>{});
       }
     }
-
     if(track.kind==='audio'){
-      if(!remoteAudioStreams[socketId]){
-        remoteAudioStreams[socketId]=new MediaStream();
-      }
-      const audioStream=remoteAudioStreams[socketId];
-      if(!audioStream.getTracks().find(t=>t.id===track.id)){
-        audioStream.addTrack(track);
-      }
       let audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
       if(!audioEl){
         audioEl=document.createElement('audio');
-        audioEl.autoplay=true;
-        audioEl.muted=false;
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
       }
-      audioEl.srcObject=null;
-      audioEl.srcObject=audioStream;
-      audioEl.play().catch(()=>{
-        const resumeAudio=()=>{
-          audioEl.play().catch(()=>{});
-          document.removeEventListener('click',resumeAudio);
-          document.removeEventListener('keydown',resumeAudio);
-        };
-        document.addEventListener('click',resumeAudio);
-        document.addEventListener('keydown',resumeAudio);
-      });
+      audioEl.srcObject=stream;
+      audioEl.play().catch(()=>{});
     }
 
-    const analysisStream=e.streams[0]||remoteAudioStreams[socketId];
-    if(analysisStream&&!peers[socketId].analyser){
+    if(stream&&!peers[socketId].analyser){
       try{
         const ctx=getAudioCtx();
         if(ctx.state==='suspended') ctx.resume();
-        const src=ctx.createMediaStreamSource(analysisStream);
+        const src=ctx.createMediaStreamSource(stream);
         const analyser=ctx.createAnalyser();
         analyser.fftSize=512;
         src.connect(analyser);
@@ -5790,7 +5751,7 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
 
   if(isInitiator){
     try{
-      const offer=await pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
+      const offer=await pc.createOffer();
       await pc.setLocalDescription(offer);
       socket?.emit('voice-offer',{offer,targetSocketId:socketId});
     }catch(e){ console.error('createOffer error',e); }
@@ -5910,22 +5871,21 @@ $('voice-share-btn')?.addEventListener('click',async()=>{
 
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-
-      const tcv=peer.pc.getTransceivers();
-      const videoTcv=tcv.find(t=>t.kind==='video');
-      if(videoTcv?.sender){
-        await videoTcv.sender.replaceTrack(screenVideoTrack);
+      const transceivers=peer.pc.getTransceivers();
+      const videoTransceiver=transceivers.find(t=>t.kind==='video');
+      if(videoTransceiver?.sender){
+        await videoTransceiver.sender.replaceTrack(screenVideoTrack);
       }
 
       if(screenAudioTrack){
-        const audioTcv=tcv.find(t=>t.kind==='audio');
-        if(audioTcv?.sender){
-          await audioTcv.sender.replaceTrack(screenAudioTrack);
+        const audioTransceiver=transceivers.find(t=>t.kind==='audio');
+        if(audioTransceiver?.sender){
+          await audioTransceiver.sender.replaceTrack(screenAudioTrack);
         }
       }
 
       try{
-        const offer=await peer.pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
+        const offer=await peer.pc.createOffer();
         await peer.pc.setLocalDescription(offer);
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }catch(e){ console.error('renegotiation error',e); }
@@ -5946,27 +5906,32 @@ function stopScreenShare(){
 
   for(const [sid,peer] of Object.entries(peers)){
     if(!peer.pc) continue;
-
-    const tcv=peer.pc.getTransceivers();
-    const videoTcv=tcv.find(t=>t.kind==='video');
-    if(videoTcv?.sender){
+    const transceivers=peer.pc.getTransceivers();
+    const videoTransceiver=transceivers.find(t=>t.kind==='video');
+    if(videoTransceiver?.sender){
       if(isCameraOn&&cameraStream){
-        videoTcv.sender.replaceTrack(cameraStream.getVideoTracks()[0]);
+        videoTransceiver.sender.replaceTrack(cameraStream.getVideoTracks()[0]);
       }else{
-        videoTcv.sender.replaceTrack(null);
+        const blankCtx=document.createElement('canvas').getContext('2d');
+        const blankCanvas=blankCtx.canvas;
+        blankCanvas.width=320; blankCanvas.height=240;
+        blankCtx.fillStyle='#0b0d17'; blankCtx.fillRect(0,0,320,240);
+        const blankStream=blankCanvas.captureStream(1);
+        const blankTrack=blankStream.getVideoTracks()[0];
+        videoTransceiver.sender.replaceTrack(blankTrack);
       }
     }
 
     if(localStream){
       const micTrack=localStream.getAudioTracks()[0];
       if(micTrack){
-        const audioTcv=tcv.find(t=>t.kind==='audio');
-        if(audioTcv?.sender) audioTcv.sender.replaceTrack(micTrack);
+        const audioTransceiver=transceivers.find(t=>t.kind==='audio');
+        if(audioTransceiver?.sender) audioTransceiver.sender.replaceTrack(micTrack);
       }
     }
 
     try{
-      peer.pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true}).then(offer=>peer.pc.setLocalDescription(offer).then(()=>{
+      peer.pc.createOffer().then(offer=>peer.pc.setLocalDescription(offer).then(()=>{
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }));
     }catch(e){}
@@ -5982,11 +5947,10 @@ async function toggleCamera(){
     if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-      const tcv=peer.pc.getTransceivers();
-      const videoTcv=tcv.find(t=>t.kind==='video');
-      if(videoTcv?.sender) await videoTcv.sender.replaceTrack(null);
+      const tcv=peer.pc.getTransceivers().find(t=>t.kind==='video');
+      if(tcv?.sender) await tcv.sender.replaceTrack(null);
       try{
-        const offer=await peer.pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
+        const offer=await peer.pc.createOffer();
         await peer.pc.setLocalDescription(offer);
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }catch(e){}
@@ -6001,11 +5965,10 @@ async function toggleCamera(){
     isCameraOn=true;
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-      const tcv=peer.pc.getTransceivers();
-      const videoTcv=tcv.find(t=>t.kind==='video');
-      if(videoTcv?.sender) await videoTcv.sender.replaceTrack(cameraStream.getVideoTracks()[0]);
+      const tcv=peer.pc.getTransceivers().find(t=>t.kind==='video');
+      if(tcv?.sender) await tcv.sender.replaceTrack(cameraStream.getVideoTracks()[0]);
       try{
-        const offer=await peer.pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
+        const offer=await peer.pc.createOffer();
         await peer.pc.setLocalDescription(offer);
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }catch(e){}
