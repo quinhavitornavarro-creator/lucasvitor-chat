@@ -4353,12 +4353,22 @@ function connectSocket(){
   });
 
   socket.on('voice-offer',async data=>{
-    let pc=peers[data.fromSocketId]?.pc;
-    if(!pc) return;
+    let peer=peers[data.fromSocketId];
+    if(!peer){
+      createPeerConnection(data.fromSocketId,data.fromUser?.id,data.fromUser?.username,data.fromUser?.avatarSeed,false);
+      peer=peers[data.fromSocketId];
+    }
+    if(!peer?.pc) return;
     try{
-      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-      const answer=await pc.createAnswer();
-      await pc.setLocalDescription(answer);
+      await peer.pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+      if(peer.iceQueue){
+        for(const c of peer.iceQueue){
+          try{ await peer.pc.addIceCandidate(new RTCIceCandidate(c)); }catch(e){}
+        }
+        peer.iceQueue=[];
+      }
+      const answer=await peer.pc.createAnswer();
+      await peer.pc.setLocalDescription(answer);
       socket.emit('voice-answer',{answer,targetSocketId:data.fromSocketId});
     }catch(e){ console.error('voice-offer error',e); }
   });
@@ -4366,13 +4376,25 @@ function connectSocket(){
   socket.on('voice-answer',async data=>{
     const peer=peers[data.fromSocketId];
     if(!peer?.pc) return;
-    try{ await peer.pc.setRemoteDescription(new RTCSessionDescription(data.answer)); }catch(e){}
+    try{
+      await peer.pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+      if(peer.iceQueue){
+        for(const c of peer.iceQueue){
+          try{ await peer.pc.addIceCandidate(new RTCIceCandidate(c)); }catch(e){}
+        }
+        peer.iceQueue=[];
+      }
+    }catch(e){}
   });
 
   socket.on('ice-candidate',async data=>{
     const peer=peers[data.fromSocketId];
     if(!peer?.pc) return;
-    try{ await peer.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); }catch(e){}
+    if(peer.pc.remoteDescription){
+      try{ await peer.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); }catch(e){}
+    }else{
+      peer.iceQueue.push(data.candidate);
+    }
   });
 
   socket.on('voice-user-muted',data=>{
@@ -5663,27 +5685,23 @@ function initWaveform(){
 }
 
 async function createPeerConnection(socketId,userId,username,avatarSeed,isInitiator){
-  if(peers[socketId]) return;
+  if(peers[socketId]) return peers[socketId];
   const pc=new RTCPeerConnection(ICE_SERVERS);
-  peers[socketId]={pc,userId,username,avatarSeed,analyser:null,isMuted:false,isScreenSharing:false};
+  const iceQueue=[];
+  peers[socketId]={pc,userId,username,avatarSeed,analyser:null,isMuted:false,isScreenSharing:false,iceQueue};
 
   if(localStream){
     localStream.getTracks().forEach(track=>pc.addTrack(track,localStream));
   }
-
   pc.addTransceiver('video',{direction:'sendrecv'});
-  pc.addTransceiver('audio',{direction:'sendrecv'});
 
-  const remoteStream=new MediaStream();
+  const remoteAudio=new MediaStream();
+  const remoteVideo=new MediaStream();
   pc.ontrack=e=>{
     const track=e.track;
-    const stream=e.streams[0]||remoteStream;
-    if(stream!==remoteStream && e.streams[0]){
-      e.streams[0].getTracks().forEach(t=>{
-        if(!remoteStream.getTracks().find(rt=>rt.id===t.id)) remoteStream.addTrack(t);
-      });
-    }
+
     if(track.kind==='video'){
+      const vs=e.streams[0]||remoteVideo;
       let videoEl=document.querySelector('[data-voice-socket="'+socketId+'"] video');
       if(!videoEl){
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
@@ -5709,26 +5727,43 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
         }
       }
       if(videoEl){
-        videoEl.srcObject=stream;
+        videoEl.srcObject=null;
+        videoEl.srcObject=vs;
         videoEl.play().catch(()=>{});
       }
     }
+
     if(track.kind==='audio'){
+      if(!remoteAudio.getTracks().find(t=>t.id===track.id)){
+        remoteAudio.addTrack(track);
+      }
       let audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
       if(!audioEl){
         audioEl=document.createElement('audio');
+        audioEl.autoplay=true;
+        audioEl.muted=false;
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
       }
-      audioEl.srcObject=stream;
-      audioEl.play().catch(()=>{});
+      audioEl.srcObject=null;
+      audioEl.srcObject=remoteAudio;
+      audioEl.play().catch(()=>{
+        const resume=()=>{
+          audioEl.play().catch(()=>{});
+          document.removeEventListener('click',resume);
+          document.removeEventListener('keydown',resume);
+        };
+        document.addEventListener('click',resume);
+        document.addEventListener('keydown',resume);
+      });
     }
 
-    if(stream&&!peers[socketId].analyser){
+    if(!peers[socketId].analyser){
       try{
+        const analysisStream=e.streams[0]||remoteAudio;
         const ctx=getAudioCtx();
         if(ctx.state==='suspended') ctx.resume();
-        const src=ctx.createMediaStreamSource(stream);
+        const src=ctx.createMediaStreamSource(analysisStream);
         const analyser=ctx.createAnalyser();
         analyser.fftSize=512;
         src.connect(analyser);
@@ -5751,7 +5786,7 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
 
   if(isInitiator){
     try{
-      const offer=await pc.createOffer();
+      const offer=await pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
       await pc.setLocalDescription(offer);
       socket?.emit('voice-offer',{offer,targetSocketId:socketId});
     }catch(e){ console.error('createOffer error',e); }
@@ -5885,7 +5920,7 @@ $('voice-share-btn')?.addEventListener('click',async()=>{
       }
 
       try{
-        const offer=await peer.pc.createOffer();
+        const offer=await peer.pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
         await peer.pc.setLocalDescription(offer);
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }catch(e){ console.error('renegotiation error',e); }
@@ -5931,7 +5966,7 @@ function stopScreenShare(){
     }
 
     try{
-      peer.pc.createOffer().then(offer=>peer.pc.setLocalDescription(offer).then(()=>{
+      peer.pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true}).then(offer=>peer.pc.setLocalDescription(offer).then(()=>{
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }));
     }catch(e){}
@@ -5950,7 +5985,7 @@ async function toggleCamera(){
       const tcv=peer.pc.getTransceivers().find(t=>t.kind==='video');
       if(tcv?.sender) await tcv.sender.replaceTrack(null);
       try{
-        const offer=await peer.pc.createOffer();
+        const offer=await peer.pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
         await peer.pc.setLocalDescription(offer);
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }catch(e){}
@@ -5968,7 +6003,7 @@ async function toggleCamera(){
       const tcv=peer.pc.getTransceivers().find(t=>t.kind==='video');
       if(tcv?.sender) await tcv.sender.replaceTrack(cameraStream.getVideoTracks()[0]);
       try{
-        const offer=await peer.pc.createOffer();
+        const offer=await peer.pc.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
         await peer.pc.setLocalDescription(offer);
         socket?.emit('voice-offer',{offer,targetSocketId:sid});
       }catch(e){}
