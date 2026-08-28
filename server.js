@@ -1187,6 +1187,12 @@ io.on('connection', (socket) => {
     broadcastVoiceUsers(vd.channelId);
   });
 
+  socket.on('user-speaking', (data) => {
+    const vd = voiceUsers.get(socket.id);
+    if (!vd) return;
+    socket.to(vd.roomName).emit('user-speaking', { socketId: socket.id, speaking: data.speaking });
+  });
+
   socket.on('screen-share-started', () => {
     const vd = voiceUsers.get(socket.id);
     if (!vd) return;
