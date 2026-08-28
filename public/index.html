@@ -5600,7 +5600,7 @@ function setSpeakingState(sid,speaking){
   const card=document.querySelector('[data-voice-socket="'+sid+'"]');
   if(card){
     card.classList.toggle('speaking',speaking);
-    if(speaking) card.style.boxShadow='0 0 0 2px #22c55e';
+    if(speaking) card.style.boxShadow='0 0 0 3px #22c55e, 0 0 12px 4px rgba(34,197,94,0.5)';
     else card.style.boxShadow='';
   }
   document.querySelectorAll('.voice-user').forEach(el=>{
@@ -5610,6 +5610,11 @@ function setSpeakingState(sid,speaking){
       else el.style.color='';
     }
   });
+  const av=document.querySelector('[data-voice-socket="'+sid+'"] .voice-avatar');
+  if(av){
+    av.style.boxShadow=speaking?'0 0 0 3px #22c55e, 0 0 16px 6px rgba(34,197,94,0.7)':'';
+    av.style.animation=speaking?'speakingGlow 0.8s ease-in-out infinite':'';
+  }
 }
 
 async function joinVoiceChannel(ch){
