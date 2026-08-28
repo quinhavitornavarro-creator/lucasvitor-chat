@@ -5760,9 +5760,10 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
         audioEl.id='audio-'+socketId;
         audioEl.autoplay=true;
         audioEl.playsInline=true;
+        audioEl.controls=true;
         audioEl.muted=false;
         audioEl.volume=1;
-        audioEl.style.display='none';
+        audioEl.style.cssText='width:220px;height:32px;margin:4px';
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
         if(card) card.appendChild(audioEl);
         else document.body.appendChild(audioEl);
@@ -5770,12 +5771,12 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
       audioEl.srcObject=remoteAudio;
       audioEl.muted=false;
       audioEl.volume=1;
-      console.log('[WebRTC] audio ->',socketId,'tracks:',remoteAudio.getTracks().length);
-      audioEl.play().catch(err=>{
-        console.warn('[WebRTC] Autoplay de áudio bloqueado:',err);
+      console.log('[WebRTC] audio ->',socketId,'tracks:',remoteAudio.getTracks().length,'muted:',audioEl.muted,'paused:',audioEl.paused);
+      audioEl.play().then(()=>console.log('[WebRTC] audio play OK',socketId)).catch(err=>{
+        console.warn('[WebRTC] Autoplay bloqueado:',err);
         const resume=()=>{
           const ctx=getAudioCtx(); if(ctx.state==='suspended') ctx.resume();
-          audioEl.play().catch(()=>{});
+          audioEl.play().then(()=>console.log('[WebRTC] audio resumed')).catch(()=>{});
           document.removeEventListener('click',resume);
           document.removeEventListener('keydown',resume);
         };
