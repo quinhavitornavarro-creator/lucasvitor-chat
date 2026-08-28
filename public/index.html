@@ -4469,6 +4469,13 @@ async function loadServers(){
 function renderServers(){
   const list=$('server-list');
   list.innerHTML='';
+  const home=document.createElement('div');
+  home.className='server-icon-wrapper'+(!currentServerId?' active':'');
+  home.dataset.tooltip='Amigos / DMs';
+  home.innerHTML='<span class="server-pill"></span><div class="server-icon" style="background:#5865f2">⌂</div>';
+  home.addEventListener('click',()=>showHome());
+  list.appendChild(home);
+  const sep=document.createElement('div'); sep.style.cssText='height:2px;background:var(--border-light);margin:6px 16px;border-radius:1px'; list.appendChild(sep);
   servers.forEach(s=>{
     const initial=(s.name||'?')[0].toUpperCase();
     const div=document.createElement('div');
@@ -4479,6 +4486,43 @@ function renderServers(){
     list.appendChild(div);
   });
 }
+function showHome(){
+  currentServerId=null; currentServer=null;
+  $('server-name-display').textContent='Amigos';
+  $('channels-list').innerHTML='<div style="padding:12px"><button class="btn btn-primary" onclick="loadFriendsUI()" style="width:100%;margin-bottom:8px">👥 Amigos</button><button class="btn btn-ghost" onclick="loadDMs()" style="width:100%;margin-bottom:8px">💬 Mensagens Diretas</button><div id="home-content" style="margin-top:12px"></div><div style="margin-top:16px"><input id="add-friend-input" placeholder="Username" style="width:100%;padding:8px;border-radius:6px;background:var(--bg-deep);border:1px solid var(--border-light);color:var(--text-primary)"><button class="btn btn-primary" onclick="addFriend()" style="width:100%;margin-top:6px">Adicionar amigo</button></div></div>';
+  $('channel-name-display').textContent='Amigos';
+  $('messages-list').innerHTML='<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text-muted)"><div style="font-size:48px">👋</div><div>Selecione um amigo ou DM</div></div>';
+  renderServers();
+}
+async function loadFriendsUI(){
+  const d=await apiCall('/api/friends');
+  const c=$('home-content');
+  c.innerHTML='<div style="font-weight:700;margin-bottom:8px">Amigos ('+d.friends.length+')</div>'+d.friends.map(f=>'<div style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;background:var(--bg-surface);margin-bottom:4px"><img src="'+getAvatarUrl(f.avatar_seed)+'" style="width:32px;height:32px;border-radius:50%"><span>'+escapeHtml(f.username)+'</span><button class="btn btn-ghost btn-sm" onclick="openDM('+f.user_id+')" style="margin-left:auto">💬</button></div>').join('')+'<div style="font-weight:700;margin:12px 0 8px">Pendentes</div>'+d.pending.map(p=>'<div style="display:flex;align-items:center;gap:8px;padding:6px"><span>'+escapeHtml(p.username)+'</span><button class="btn btn-primary btn-sm" onclick="acceptFriend('+p.id+')">Aceitar</button></div>').join('');
+}
+async function addFriend(){ const u=$('add-friend-input').value.trim(); if(!u) return; await apiCall('/api/friends/request',{method:'POST',body:JSON.stringify({username:u})}); showToast('success','Pedido enviado'); loadFriendsUI(); }
+async function acceptFriend(id){ await apiCall('/api/friends/'+id+'/accept',{method:'POST'}); loadFriendsUI(); }
+async function openDM(userId){ const d=await apiCall('/api/dm',{method:'POST',body:JSON.stringify({userId})}); loadDMChat(d.dmId); }
+async function loadDMs(){ const d=await apiCall('/api/dm'); const c=$('home-content'); c.innerHTML=d.dms.map(dm=>'<div style="padding:8px;border-radius:6px;background:var(--bg-surface);margin-bottom:4px;cursor:pointer" onclick="loadDMChat('+dm.id+')">'+dm.members.map(m=>escapeHtml(m.username)).join(', ')+'</div>').join('')||'<div style="color:var(--text-muted)">Nenhuma DM</div>'; }
+async function loadDMChat(dmId){ window._currentDM=dmId; const d=await apiCall('/api/dm/'+dmId+'/messages'); $('channel-name-display').textContent='DM #'+dmId; $('messages-list').innerHTML=d.messages.map(m=>'<div style="padding:8px;border-bottom:1px solid var(--border-subtle)"><b>'+escapeHtml(m.username)+'</b>: '+escapeHtml(m.content)+'</div>').join('')||'<div style="padding:20px;color:var(--text-muted)">Sem mensagens</div>'; $('message-input').placeholder='Mensagem em DM...'; $('message-input').onkeydown=(e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); const t=$('message-input').value.trim(); if(!t) return; socket.emit('dmMessage',{dmId:window._currentDM,content:t}); $('message-input').value=''; } }; }
+socket?.on?.('dmMessage',msg=>{ if(window._currentDM===msg.dm_id){ const l=$('messages-list'); const d=document.createElement('div'); d.style.padding='8px'; d.style.borderBottom='1px solid var(--border-subtle)'; d.innerHTML='<b>'+escapeHtml(msg.username)+'</b>: '+escapeHtml(msg.content); l.appendChild(d); l.scrollTop=l.scrollHeight; } });
+async function openThread(parentId){
+  let title=prompt('Título da thread (opcional):')||'';
+  const r=await apiCall('/api/channels/'+currentChannelId+'/threads',{method:'POST',body:JSON.stringify({parentMessageId:parentId,title})});
+  showThread(r.threadId);
+}
+async function showThread(threadId){
+  const d=await apiCall('/api/threads/'+threadId+'/messages');
+  const panel=document.getElementById('thread-panel')||(()=>{ const p=document.createElement('div'); p.id='thread-panel'; p.style.cssText='position:fixed;right:0;top:0;bottom:0;width:360px;background:var(--bg-base);border-left:1px solid var(--border-light);z-index:50;display:flex;flex-direction:column'; document.body.appendChild(p); return p; })();
+  panel.innerHTML='<div style="padding:12px;font-weight:700;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between">🧵 Thread <button onclick="document.getElementById(\'thread-panel\').remove()" class="btn btn-ghost">✕</button></div><div style="flex:1;overflow:auto;padding:12px" id="thread-msgs">'+d.messages.map(m=>'<div style="padding:8px;border-bottom:1px solid var(--border-subtle)"><b>'+escapeHtml(m.username)+'</b>: '+escapeHtml(m.content)+'</div>').join('')+'</div><div style="padding:8px;border-top:1px solid var(--border-light);display:flex;gap:8px"><input id="thread-input" placeholder="Responder na thread..." style="flex:1;padding:8px;border-radius:6px;background:var(--bg-deep);border:1px solid var(--border-light);color:var(--text-primary)"><button class="btn btn-primary" onclick="sendThreadReply('+threadId+')">Enviar</button></div>';
+  panel.style.display='flex';
+}
+async function sendThreadReply(threadId){
+  const input=$('thread-input'); const c=input.value.trim(); if(!c) return;
+  const t=await apiCall('/api/threads/'+threadId+'/messages',{method:'POST',body:JSON.stringify({content:c})}).catch(()=>null);
+  // fallback: send as reply_to
+  if(!t){ await apiCall('/api/channels/'+currentChannelId+'/messages',{method:'POST',body:JSON.stringify({content:c,replyTo:threadId})}); }
+  showThread(threadId);
+}
 
 async function selectServer(server){
   currentServer=server;
@@ -4487,7 +4531,7 @@ async function selectServer(server){
   $('server-name-display').textContent=server.name;
   hideServerMenu();
   renderServers();
-  renderChannels(server.channels||[]);
+  loadCategoriesAndRender(server.channels||[]);
   const firstText=(server.channels||[]).find(c=>c.type==='text');
   if(firstText) selectChannel(firstText);
   else {
@@ -4654,6 +4698,13 @@ $('join-server-submit')?.addEventListener('click',async()=>{
 
 // ─── Channels ──────────────────────────────────────────────────────────────
 
+async function loadCategoriesAndRender(channels){
+  try{
+    const d=await apiCall('/api/servers/'+currentServerId+'/categories');
+    window._cats=d.categories||[];
+  }catch(e){ window._cats=[]; }
+  renderChannels(channels);
+}
 function renderChannels(channels){
   const list=$('channels-list');
   list.innerHTML='';
@@ -4661,7 +4712,43 @@ function renderChannels(channels){
     list.innerHTML='<div class="empty-state"><div class="empty-icon">💬</div><h3>Nenhum canal</h3></div>';
     return;
   }
-
+  const cats=window._cats||[];
+  if(cats.length){
+    cats.forEach(cat=>{
+      const chs=channels.filter(c=>c.category_id===cat.id);
+      const catEl=document.createElement('div');
+      catEl.className='channel-category';
+      catEl.innerHTML='<div class="category-header"><span class="category-chevron">▼</span><span class="category-name">'+escapeHtml(cat.name)+'</span></div>';
+      const chList=document.createElement('div'); chList.className='channel-category-list';
+      chs.forEach(ch=>{
+        const item=document.createElement('div');
+        item.className='channel-item'+(currentChannelId===ch.id?' active':'');
+        if(ch.type==='voice') item.classList.add('voice-channel-item');
+        item.dataset.channelId=ch.id;
+        item.innerHTML='<span class="channel-icon">'+(ch.type==='voice'?'🔊':'#')+'</span><span class="channel-label">'+escapeHtml(ch.name)+'</span>';
+        item.addEventListener('click',()=> ch.type==='voice'?joinVoiceChannel(ch):selectChannel(ch));
+        chList.appendChild(item);
+      });
+      catEl.appendChild(chList);
+      list.appendChild(catEl);
+    });
+    const uncat=channels.filter(c=>!c.category_id);
+    if(uncat.length){
+      const textChannels=uncat.filter(c=>c.type==='text');
+      const voiceChannels=uncat.filter(c=>c.type==='voice');
+      if(textChannels.length||voiceChannels.length){
+        const cat=document.createElement('div'); cat.className='channel-category';
+        cat.innerHTML='<div class="category-header"><span class="category-chevron">▼</span><span class="category-name">Sem categoria</span></div>';
+        const chList=document.createElement('div'); chList.className='channel-category-list';
+        uncat.forEach(ch=>{
+          const item=document.createElement('div'); item.className='channel-item'+(currentChannelId===ch.id?' active':''); if(ch.type==='voice') item.classList.add('voice-channel-item'); item.dataset.channelId=ch.id; item.innerHTML='<span class="channel-icon">'+(ch.type==='voice'?'🔊':'#')+'</span><span class="channel-label">'+escapeHtml(ch.name)+'</span>'; item.addEventListener('click',()=> ch.type==='voice'?joinVoiceChannel(ch):selectChannel(ch)); chList.appendChild(item);
+        });
+        cat.appendChild(chList); list.appendChild(cat);
+      }
+      return;
+    }
+    return;
+  }
   const textChannels=channels.filter(c=>c.type==='text');
   const voiceChannels=channels.filter(c=>c.type==='voice');
 
@@ -4850,6 +4937,7 @@ function renderMessage(msg,showHeader){
     '<span class="msg-timestamp-inline">'+formatShortTime(msg.created_at)+'</span>'+
     '<div class="msg-content">'+(fileHtml?fileHtml:renderRichText(msg.content))+editedHtml+'</div>'+
     '<div class="msg-reactions">'+renderReactions(msg.id,reactions)+'</div>'+
+    '<button class="btn btn-ghost btn-sm" onclick="openThread('+msg.id+')" style="margin-top:4px;font-size:0.7rem">🧵 Thread</button>'+
     '</div>'+
     '<div class="msg-actions">'+
     '<button onclick="window._replyMsg('+msg.id+',\''+escapeHtml(name)+'\')" title="Responder">↩</button>'+

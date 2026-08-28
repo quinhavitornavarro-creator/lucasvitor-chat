@@ -840,7 +840,7 @@ app.delete('/api/servers/:serverId/leave', authMiddleware, async (req, res) => {
   }
 });
 
-app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (req, res) => {
+  app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (req, res) => {
   try {
     const serverId = parseInt(req.params.serverId);
     const channelId = parseInt(req.params.channelId);
@@ -852,6 +852,148 @@ app.delete('/api/servers/:serverId/channels/:channelId', authMiddleware, async (
   } catch (error) {
     res.status(500).json({ error: 'Erro ao deletar canal' });
   }
+});
+
+// ─── Categories ───────────────────────────────────────────────────────────
+app.post('/api/servers/:serverId/categories', authMiddleware, async (req, res) => {
+  try {
+    const serverId = parseInt(req.params.serverId);
+    if (!(await isModerator(serverId, req.user.id))) return res.status(403).json({ error: 'Sem permissão' });
+    const { name } = req.body;
+    if (!name || name.length < 2) return res.status(400).json({ error: 'Nome inválido' });
+    const maxPos = await queryOne('SELECT MAX(position) as pos FROM categories WHERE server_id=$1', [serverId]);
+    const pos = (maxPos?.pos || 0) + 1;
+    const r = await runReturningId('INSERT INTO categories (server_id,name,position) VALUES ($1,$2,$3) RETURNING id', [serverId, sanitizeHtml(name), pos]);
+    res.json({ success: true, category: { id: r.id, name, position: pos } });
+  } catch (e) { res.status(500).json({ error: 'Erro ao criar categoria' }); }
+});
+app.get('/api/servers/:serverId/categories', authMiddleware, async (req, res) => {
+  try {
+    const cats = await query('SELECT * FROM categories WHERE server_id=$1 ORDER BY position ASC', [req.params.serverId]);
+    res.json({ categories: cats });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.put('/api/categories/:categoryId', authMiddleware, async (req, res) => {
+  try {
+    const cat = await queryOne('SELECT * FROM categories WHERE id=$1', [req.params.categoryId]);
+    if (!cat) return res.status(404).json({ error: 'Categoria não encontrada' });
+    if (!(await isModerator(cat.server_id, req.user.id))) return res.status(403).json({ error: 'Sem permissão' });
+    if (req.body.name) await run('UPDATE categories SET name=$1 WHERE id=$2', [sanitizeHtml(req.body.name), cat.id]);
+    if (req.body.category_id !== undefined) await run('UPDATE channels SET category_id=$1 WHERE id=$2', [req.body.category_id||null, req.body.channelId]);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.put('/api/channels/:channelId/move', authMiddleware, async (req, res) => {
+  try {
+    const { category_id, position } = req.body;
+    await run('UPDATE channels SET category_id=$1, position=$2 WHERE id=$3', [category_id||null, position||0, req.params.channelId]);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+
+// ─── Friends ──────────────────────────────────────────────────────────────
+app.post('/api/friends/request', authMiddleware, async (req, res) => {
+  try {
+    const { username } = req.body;
+    const target = await findByUsername(username);
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+    if (target.id === req.user.id) return res.status(400).json({ error: 'Não pode adicionar você mesmo' });
+    const existing = await queryOne('SELECT * FROM friend_requests WHERE (from_user_id=$1 AND to_user_id=$2) OR (from_user_id=$2 AND to_user_id=$1)', [req.user.id, target.id]);
+    if (existing) return res.status(400).json({ error: 'Solicitação já existe' });
+    await run('INSERT INTO friend_requests (from_user_id,to_user_id) VALUES ($1,$2)', [req.user.id, target.id]);
+    io.to(`user:${target.id}`)?.emit?.('friend-request', { from: req.user.username });
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.post('/api/friends/:id/accept', authMiddleware, async (req, res) => {
+  try {
+    const fr = await queryOne('SELECT * FROM friend_requests WHERE id=$1 AND to_user_id=$2', [req.params.id, req.user.id]);
+    if (!fr) return res.status(404).json({ error: 'Solicitação não encontrada' });
+    await run("UPDATE friend_requests SET status='accepted' WHERE id=$1", [fr.id]);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.post('/api/friends/:id/decline', authMiddleware, async (req, res) => {
+  try { await run('DELETE FROM friend_requests WHERE id=$1 AND to_user_id=$2', [req.params.id, req.user.id]); res.json({ success: true }); } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.get('/api/friends', authMiddleware, async (req, res) => {
+  try {
+    const friends = await query(`
+      SELECT fr.id, fr.status, u.id as user_id, u.username, u.avatar_seed, u.status as presence
+      FROM friend_requests fr JOIN users u ON (u.id = CASE WHEN fr.from_user_id=$1 THEN fr.to_user_id ELSE fr.from_user_id END)
+      WHERE (fr.from_user_id=$1 OR fr.to_user_id=$1) AND fr.status='accepted'
+    `, [req.user.id]);
+    const pending = await query(`
+      SELECT fr.id, u.username, u.avatar_seed FROM friend_requests fr JOIN users u ON fr.from_user_id=u.id WHERE fr.to_user_id=$1 AND fr.status='pending'
+    `, [req.user.id]);
+    res.json({ friends, pending });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+
+// ─── DMs ──────────────────────────────────────────────────────────────────
+app.post('/api/dm', authMiddleware, async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const target = await findById(userId);
+    if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+    const existing = await queryOne(`
+      SELECT dm.id FROM dm_channels dm
+      JOIN dm_members m1 ON m1.dm_id=dm.id AND m1.user_id=$1
+      JOIN dm_members m2 ON m2.dm_id=dm.id AND m2.user_id=$2
+      WHERE (SELECT COUNT(*) FROM dm_members WHERE dm_id=dm.id)=2
+    `, [req.user.id, userId]);
+    if (existing) return res.json({ dmId: existing.id });
+    const r = await runReturningId('INSERT INTO dm_channels DEFAULT VALUES RETURNING id', []);
+    const dmId = r.id;
+    await run('INSERT INTO dm_members (dm_id,user_id) VALUES ($1,$2),($1,$3)', [dmId, req.user.id, userId]);
+    res.json({ dmId });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.get('/api/dm', authMiddleware, async (req, res) => {
+  try {
+    const dms = await query(`
+      SELECT dm.id, dm.name, json_agg(json_build_object('id',u.id,'username',u.username,'avatar_seed',u.avatar_seed)) as members
+      FROM dm_channels dm JOIN dm_members m ON m.dm_id=dm.id JOIN users u ON u.id=m.user_id
+      WHERE dm.id IN (SELECT dm_id FROM dm_members WHERE user_id=$1)
+      GROUP BY dm.id
+    `, [req.user.id]);
+    res.json({ dms });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.get('/api/dm/:dmId/messages', authMiddleware, async (req, res) => {
+  try {
+    const isMember = await queryOne('SELECT * FROM dm_members WHERE dm_id=$1 AND user_id=$2', [req.params.dmId, req.user.id]);
+    if (!isMember) return res.status(403).json({ error: 'Sem acesso' });
+    const msgs = await query('SELECT dm.*, u.username, u.avatar_seed FROM dm_messages dm JOIN users u ON dm.user_id=u.id WHERE dm.dm_id=$1 ORDER BY dm.created_at ASC LIMIT 100', [req.params.dmId]);
+    res.json({ messages: msgs });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+
+// ─── Threads ──────────────────────────────────────────────────────────────
+app.post('/api/channels/:channelId/threads', authMiddleware, async (req, res) => {
+  try {
+    const { parentMessageId, title } = req.body;
+    const r = await runReturningId('INSERT INTO threads (channel_id,parent_message_id,title,created_by) VALUES ($1,$2,$3,$4) RETURNING id', [req.params.channelId, parentMessageId, title||'', req.user.id]);
+    res.json({ threadId: r.id });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.get('/api/threads/:threadId/messages', authMiddleware, async (req, res) => {
+  try {
+    const t = await queryOne('SELECT * FROM threads WHERE id=$1', [req.params.threadId]);
+    if (!t) return res.status(404).json({ error: 'Thread não encontrada' });
+    const msgs = await query('SELECT m.*, u.username FROM messages m JOIN users u ON m.user_id=u.id WHERE m.reply_to=$1 OR m.id=$1 ORDER BY m.created_at ASC', [t.parent_message_id]);
+    res.json({ messages: msgs, thread: t });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
+});
+app.post('/api/threads/:threadId/messages', authMiddleware, async (req, res) => {
+  try {
+    const t = await queryOne('SELECT * FROM threads WHERE id=$1', [req.params.threadId]);
+    if (!t) return res.status(404).json({ error: 'Thread não encontrada' });
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ error: 'Conteúdo obrigatório' });
+    const r = await runReturningId('INSERT INTO messages (channel_id,user_id,content,reply_to) VALUES ($1,$2,$3,$4) RETURNING id', [t.channel_id, req.user.id, sanitizeHtml(content), t.parent_message_id]);
+    res.json({ id: r.id });
+  } catch (e) { res.status(500).json({ error: 'Erro' }); }
 });
 
 // ─── SOCKET.IO ───────────────────────────────────────────────────────────────
@@ -1078,6 +1220,25 @@ io.on('connection', (socket) => {
       }
     })();
   });
+
+  socket.on('dmMessage', (data) => {
+    (async () => {
+      try {
+        const { dmId, content } = data;
+        if (!content || !dmId) return;
+        const isMember = await queryOne('SELECT * FROM dm_members WHERE dm_id=$1 AND user_id=$2', [dmId, socket.user.id]);
+        if (!isMember) return;
+        const r = await runReturningId('INSERT INTO dm_messages (dm_id,user_id,content) VALUES ($1,$2,$3) RETURNING id', [dmId, socket.user.id, sanitizeHtml(content)]);
+        const msg = { id: r.id, dm_id: dmId, user_id: socket.user.id, username: socket.user.username, avatar_seed: socket.user.avatarSeed, content: sanitizeHtml(content), created_at: new Date().toISOString() };
+        const members = await query('SELECT user_id FROM dm_members WHERE dm_id=$1', [dmId]);
+        for (const m of members) {
+          const sids = userSockets.get(m.user_id);
+          if (sids) for (const sid of sids) io.to(sid).emit('dmMessage', msg);
+        }
+      } catch (e) { console.error(e.message); }
+    })();
+  });
+  socket.on('joinDM', (dmId) => { socket.join(`dm:${dmId}`); });
 
   // ─── Voice (Full Mesh WebRTC) ──────────────────────────────────────────────
 

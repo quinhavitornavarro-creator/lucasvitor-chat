@@ -181,6 +181,82 @@ async function initDatabase() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_message_pins_message ON message_pins(message_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_message_pins_channel ON message_pins(message_id)`);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS categories (
+      id SERIAL PRIMARY KEY,
+      server_id INTEGER NOT NULL,
+      name TEXT NOT NULL,
+      position INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT NOW(),
+      FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+    );
+  `);
+  await pool.query(`ALTER TABLE channels ADD COLUMN IF NOT EXISTS category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL`);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS friend_requests (
+      id SERIAL PRIMARY KEY,
+      from_user_id INTEGER NOT NULL,
+      to_user_id INTEGER NOT NULL,
+      status TEXT DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined','blocked')),
+      created_at TEXT DEFAULT NOW(),
+      UNIQUE(from_user_id, to_user_id),
+      FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS dm_channels (
+      id SERIAL PRIMARY KEY,
+      is_group INTEGER DEFAULT 0,
+      name TEXT DEFAULT '',
+      created_at TEXT DEFAULT NOW()
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS dm_members (
+      dm_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      joined_at TEXT DEFAULT NOW(),
+      PRIMARY KEY (dm_id, user_id),
+      FOREIGN KEY (dm_id) REFERENCES dm_channels(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS dm_messages (
+      id SERIAL PRIMARY KEY,
+      dm_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_at TEXT DEFAULT NOW(),
+      FOREIGN KEY (dm_id) REFERENCES dm_channels(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS threads (
+      id SERIAL PRIMARY KEY,
+      channel_id INTEGER NOT NULL,
+      parent_message_id INTEGER NOT NULL,
+      title TEXT DEFAULT '',
+      created_by INTEGER NOT NULL,
+      created_at TEXT DEFAULT NOW(),
+      FOREIGN KEY (channel_id) REFERENCES channels(id) ON DELETE CASCADE,
+      FOREIGN KEY (parent_message_id) REFERENCES messages(id) ON DELETE CASCADE,
+      FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+    );
+  `);
+
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_categories_server ON categories(server_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_friend_requests_from ON friend_requests(from_user_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_friend_requests_to ON friend_requests(to_user_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_dm_members_user ON dm_members(user_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_dm_messages_dm ON dm_messages(dm_id, created_at DESC)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_threads_channel ON threads(channel_id)`);
+
   const defaultServer = await pool.query('SELECT id FROM servers LIMIT 1');
   if (defaultServer.rows.length === 0) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
