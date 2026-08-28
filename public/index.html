@@ -3787,6 +3787,7 @@ let peers = {}, isScreenSharing = false, screenStream = null;
 let voiceUsersMap = {};
 let isCameraOn = false, cameraStream = null;
 let speakingCheckInterval = null, localAnalyser = null, localAnalyserData = null;
+let speakingCounters = {};
 let replyingTo = null, editingMessageId = null, audioCtx = null;
 let typingTimeout = null, typingUsers = new Set();
 let hasMoreMessages = true, isLoadingMessages = false;
@@ -5277,25 +5278,34 @@ function setupLocalAnalyser(){
 
 function startSpeakingDetection(){
   if(speakingCheckInterval) clearInterval(speakingCheckInterval);
+  speakingCounters={};
   speakingCheckInterval=setInterval(()=>{
     checkLocalSpeaking();
     Object.keys(peers).forEach(sid=>{
       if(peers[sid]?.analyser) checkRemoteSpeaking(sid,peers[sid].analyser);
     });
-  },300);
+  },200);
 }
 
 function checkLocalSpeaking(){
-  if(!localAnalyser||!localAnalyserData||isMuted){
+  if(!localAnalyser||!localAnalyserData||isMuted||isDeafened){
     setSpeakingState('local',false);
     if(socket?.id) setSpeakingState(socket.id,false);
+    speakingCounters['local']=0;
     return;
   }
   localAnalyser.getByteFrequencyData(localAnalyserData);
   let sum=0;
   for(let i=0;i<localAnalyserData.length;i++) sum+=localAnalyserData[i];
   const avg=sum/localAnalyserData.length;
-  const speaking=avg>20;
+  const isAbove=avg>30;
+  const key='local';
+  if(isAbove){
+    speakingCounters[key]=(speakingCounters[key]||0)+1;
+  }else{
+    speakingCounters[key]=0;
+  }
+  const speaking=speakingCounters[key]>=2;
   setSpeakingState('local',speaking);
   if(socket?.id) setSpeakingState(socket.id,speaking);
 }
@@ -5307,7 +5317,14 @@ function checkRemoteSpeaking(sid,analyser){
   let sum=0;
   for(let i=0;i<data.length;i++) sum+=data[i];
   const avg=sum/data.length;
-  setSpeakingState(sid,avg>20);
+  const isAbove=avg>30;
+  if(isAbove){
+    speakingCounters[sid]=(speakingCounters[sid]||0)+1;
+  }else{
+    speakingCounters[sid]=0;
+  }
+  const speaking=speakingCounters[sid]>=2;
+  setSpeakingState(sid,speaking);
 }
 
 function setSpeakingState(sid,speaking){
@@ -5356,9 +5373,24 @@ function cleanupVoice(){
   peers={};
   if(speakingCheckInterval){ clearInterval(speakingCheckInterval); speakingCheckInterval=null; }
   if(waveformInterval){ clearInterval(waveformInterval); waveformInterval=null; }
+  speakingCounters={};
+  document.querySelectorAll('.video-tile.speaking').forEach(el=>{
+    el.classList.remove('speaking');
+    el.style.boxShadow='';
+  });
+  document.querySelectorAll('.voice-user.speaking').forEach(el=>{
+    el.classList.remove('speaking');
+    el.style.color='';
+  });
+  if(audioCtx){
+    try{ audioCtx.close(); }catch(e){}
+    audioCtx=null;
+  }
   localAnalyser=null;
   localAnalyserData=null;
   $('voice-connected-panel')?.classList.add('hidden');
+  $('voice-mute-btn')?.classList.remove('active');
+  $('voice-deafen-btn')?.classList.remove('active');
   $('voice-video-btn')?.classList.remove('active');
   $('voice-share-btn')?.classList.remove('active');
   $('video-grid').innerHTML='';
@@ -5549,6 +5581,11 @@ function toggleMute(){
   localStream.getAudioTracks().forEach(t=>t.enabled=!isMuted);
   $('voice-mute-btn')?.classList.toggle('active',isMuted);
   $('mute-btn')?.classList.toggle('active',isMuted);
+  if(isMuted){
+    speakingCounters['local']=0;
+    setSpeakingState('local',false);
+    if(socket?.id) setSpeakingState(socket.id,false);
+  }
   socket?.emit('voice-mute',{isMuted});
 }
 
@@ -5561,6 +5598,13 @@ function toggleDeafen(){
   if(localStream) localStream.getAudioTracks().forEach(t=>t.enabled=!isDeafened);
   $('voice-deafen-btn')?.classList.toggle('active',isDeafened);
   $('deafen-btn')?.classList.toggle('active',isDeafened);
+  if(isDeafened){
+    speakingCounters={};
+    document.querySelectorAll('.video-tile.speaking').forEach(el=>{
+      el.classList.remove('speaking');
+      el.style.boxShadow='';
+    });
+  }
   Object.values(peers).forEach(p=>{
     if(p.pc){
       p.pc.getReceivers().forEach(r=>{ if(r.track?.kind==='audio') r.track.enabled=!isDeafened; });
