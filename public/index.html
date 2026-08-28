@@ -5690,25 +5690,18 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
   const iceQueue=[];
   peers[socketId]={pc,userId,username,avatarSeed,analyser:null,isMuted:false,isScreenSharing:false,iceQueue};
 
-  pc.addTransceiver('video',{direction:'sendrecv'});
-
   if(localStream){
     localStream.getTracks().forEach(track=>pc.addTrack(track,localStream));
   }
+  pc.addTransceiver('video',{direction:'sendrecv'});
 
-  const remoteStream=new MediaStream();
+  const remoteAudioStreams={};
   pc.ontrack=e=>{
     const track=e.track;
-    let stream=e.streams[0];
-    if(!stream){
-      stream=new MediaStream([track]);
-    }else{
-      stream.getTracks().forEach(t=>{
-        if(!remoteStream.getTracks().find(rt=>rt.id===t.id)) remoteStream.addTrack(t);
-      });
-      stream=remoteStream;
-    }
+    const streamId=e.streams[0]?e.streams[0].id:null;
+
     if(track.kind==='video'){
+      const vidStream=e.streams[0]||new MediaStream([track]);
       let videoEl=document.querySelector('[data-voice-socket="'+socketId+'"] video');
       if(!videoEl){
         const card=document.querySelector('[data-voice-socket="'+socketId+'"]');
@@ -5735,11 +5728,19 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
       }
       if(videoEl){
         videoEl.srcObject=null;
-        videoEl.srcObject=stream;
+        videoEl.srcObject=vidStream;
         videoEl.play().catch(()=>{});
       }
     }
+
     if(track.kind==='audio'){
+      if(!remoteAudioStreams[socketId]){
+        remoteAudioStreams[socketId]=new MediaStream();
+      }
+      const audioStream=remoteAudioStreams[socketId];
+      if(!audioStream.getTracks().find(t=>t.id===track.id)){
+        audioStream.addTrack(track);
+      }
       let audioEl=document.querySelector('[data-voice-socket="'+socketId+'"] audio');
       if(!audioEl){
         audioEl=document.createElement('audio');
@@ -5749,23 +5750,24 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
         if(card) card.appendChild(audioEl);
       }
       audioEl.srcObject=null;
-      audioEl.srcObject=stream;
+      audioEl.srcObject=audioStream;
       audioEl.play().catch(()=>{
         const resumeAudio=()=>{
           audioEl.play().catch(()=>{});
           document.removeEventListener('click',resumeAudio);
           document.removeEventListener('keydown',resumeAudio);
         };
-        document.addEventListener('click',resumeAudio,{once:false});
-        document.addEventListener('keydown',resumeAudio,{once:false});
+        document.addEventListener('click',resumeAudio);
+        document.addEventListener('keydown',resumeAudio);
       });
     }
 
-    if(stream&&!peers[socketId].analyser){
+    const analysisStream=e.streams[0]||remoteAudioStreams[socketId];
+    if(analysisStream&&!peers[socketId].analyser){
       try{
         const ctx=getAudioCtx();
         if(ctx.state==='suspended') ctx.resume();
-        const src=ctx.createMediaStreamSource(stream);
+        const src=ctx.createMediaStreamSource(analysisStream);
         const analyser=ctx.createAnalyser();
         analyser.fftSize=512;
         src.connect(analyser);
@@ -5788,7 +5790,7 @@ async function createPeerConnection(socketId,userId,username,avatarSeed,isInitia
 
   if(isInitiator){
     try{
-      const offer=await pc.createOffer();
+      const offer=await pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
       await pc.setLocalDescription(offer);
       socket?.emit('voice-offer',{offer,targetSocketId:socketId});
     }catch(e){ console.error('createOffer error',e); }
@@ -5909,17 +5911,16 @@ $('voice-share-btn')?.addEventListener('click',async()=>{
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
 
-      const videoSender=peer.pc.getSenders().find(s=>s.track&&s.track.kind==='video')||peer.pc.getSenders().find(s=>!s.track);
-      if(videoSender){
-        await videoSender.replaceTrack(screenVideoTrack);
-      }else{
-        peer.pc.addTrack(screenVideoTrack,screenStream);
+      const tcv=peer.pc.getTransceivers();
+      const videoTcv=tcv.find(t=>t.kind==='video');
+      if(videoTcv?.sender){
+        await videoTcv.sender.replaceTrack(screenVideoTrack);
       }
 
       if(screenAudioTrack){
-        const audioSender=peer.pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
-        if(audioSender){
-          await audioSender.replaceTrack(screenAudioTrack);
+        const audioTcv=tcv.find(t=>t.kind==='audio');
+        if(audioTcv?.sender){
+          await audioTcv.sender.replaceTrack(screenAudioTrack);
         }
       }
 
@@ -5946,20 +5947,21 @@ function stopScreenShare(){
   for(const [sid,peer] of Object.entries(peers)){
     if(!peer.pc) continue;
 
-    const videoSender=peer.pc.getSenders().find(s=>s.track&&s.track.kind==='video')||peer.pc.getSenders().find(s=>!s.track);
-    if(videoSender){
+    const tcv=peer.pc.getTransceivers();
+    const videoTcv=tcv.find(t=>t.kind==='video');
+    if(videoTcv?.sender){
       if(isCameraOn&&cameraStream){
-        videoSender.replaceTrack(cameraStream.getVideoTracks()[0]);
+        videoTcv.sender.replaceTrack(cameraStream.getVideoTracks()[0]);
       }else{
-        videoSender.replaceTrack(null);
+        videoTcv.sender.replaceTrack(null);
       }
     }
 
     if(localStream){
       const micTrack=localStream.getAudioTracks()[0];
       if(micTrack){
-        const audioSender=peer.pc.getSenders().find(s=>s.track&&s.track.kind==='audio');
-        if(audioSender) audioSender.replaceTrack(micTrack);
+        const audioTcv=tcv.find(t=>t.kind==='audio');
+        if(audioTcv?.sender) audioTcv.sender.replaceTrack(micTrack);
       }
     }
 
@@ -5980,8 +5982,9 @@ async function toggleCamera(){
     if(cameraStream){ cameraStream.getTracks().forEach(t=>t.stop()); cameraStream=null; }
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-      const videoSender=peer.pc.getSenders().find(s=>s.track&&s.track.kind==='video')||peer.pc.getSenders().find(s=>!s.track);
-      if(videoSender) await videoSender.replaceTrack(null);
+      const tcv=peer.pc.getTransceivers();
+      const videoTcv=tcv.find(t=>t.kind==='video');
+      if(videoTcv?.sender) await videoTcv.sender.replaceTrack(null);
       try{
         const offer=await peer.pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
         await peer.pc.setLocalDescription(offer);
@@ -5998,8 +6001,9 @@ async function toggleCamera(){
     isCameraOn=true;
     for(const [sid,peer] of Object.entries(peers)){
       if(!peer.pc) continue;
-      const videoSender=peer.pc.getSenders().find(s=>s.track&&s.track.kind==='video')||peer.pc.getSenders().find(s=>!s.track);
-      if(videoSender) await videoSender.replaceTrack(cameraStream.getVideoTracks()[0]);
+      const tcv=peer.pc.getTransceivers();
+      const videoTcv=tcv.find(t=>t.kind==='video');
+      if(videoTcv?.sender) await videoTcv.sender.replaceTrack(cameraStream.getVideoTracks()[0]);
       try{
         const offer=await peer.pc.createOffer({offerToReceiveVideo:true,offerToReceiveAudio:true});
         await peer.pc.setLocalDescription(offer);
